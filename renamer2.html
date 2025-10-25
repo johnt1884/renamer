@@ -9,7 +9,7 @@
             height: 100%;
             margin: 0;
             padding: 0;
-            background-color: #000000;
+            background-color: #EBEBEB;
             color: #ffffff;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
         }
@@ -25,37 +25,85 @@
             flex-direction: column;
             flex-shrink: 0;
         }
+        .sidebar-buttons {
+            display: flex;
+            height: 36px;
+        }
+        .sidebar-cog-btn {
+            width: 20%;
+            height: 36px;
+            border: 1px solid #444444;
+            background-color: #1877f2;
+            color: #ffffff;
+            border-radius: 0;
+            font-size: 14px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 8px;
+            box-sizing: border-box;
+        }
+        .sidebar-cog-btn:hover {
+            background-color: #166fe5;
+        }
+        #load-directory-btn {
+            flex: 1;
+            background-color: #1877f2;
+            color: #ffffff;
+            border: 1px solid #444444;
+            border-radius: 0;
+            font-size: 14px;
+            height: 36px;
+            padding: 0 8px;
+            cursor: pointer;
+            box-sizing: border-box;
+        }
+        #load-directory-btn:hover {
+            background-color: #166fe5;
+        }
+        .modal-content button, #last-dir-btn {
+            background-color: #1877f2;
+            color: #ffffff;
+            border: 1px solid #444444;
+            border-radius: 0;
+            font-size: 14px;
+            height: 36px;
+            padding: 0 8px;
+            cursor: pointer;
+            box-sizing: border-box;
+        }
+        .modal-content button:hover {
+            background-color: #166fe5;
+        }
+        #directory-picker {
+            display: none;
+        }
         .main-content {
             flex-grow: 1;
             display: flex;
             flex-direction: column;
         }
         .top-bar {
-            padding: 10px 20px;
+            padding: 10px 20px 10px 0px;
             border-bottom: 1px solid #444444;
             display: flex;
             align-items: center;
             height: 36px; /* Match button height */
             box-sizing: border-box;
+            background-color: #1877f2;
+        }
+        .bottom-bar {
+            padding: 10px 20px 10px 0px;
+            border-top: 1px solid #444444;
+            display: flex;
+            align-items: center;
+            height: 36px; /* Match button height */
+            box-sizing: border-box;
+            background-color: #1877f2;
         }
         .top-bar label {
             margin-right: 10px; /* Add padding between label and dropdown */
-        }
-        #load-directory-btn, .modal-content button, #last-dir-btn {
-            background-color: #1877f2;
-            color: #ffffff;
-            border: none;
-            border-radius: 0;
-            font-size: 16px;
-            padding: 10px 0;
-            cursor: pointer;
-            width: 100%;
-        }
-        #load-directory-btn:hover, .modal-content button:hover {
-            background-color: #166fe5;
-        }
-        #directory-picker {
-            display: none;
         }
         #thumbnail-container {
             flex-grow: 1;
@@ -197,12 +245,100 @@
         #video-next-btn {
             right: 10px;
         }
+
+        /* Style for dropdown menus to match button height */
+        select {
+            height: 36px;
+            padding: 0 8px 0 8px;
+            padding-right: 32px;
+            border: 1px solid #444444;
+            background-color: #1877f2;
+            color: #ffffff;
+            border-radius: 0;
+            font-size: 14px;
+            box-sizing: border-box;
+            margin-right: 0;
+            text-align: center;
+            appearance: none;
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e");
+            background-repeat: no-repeat;
+            background-position: right 8px center;
+            background-size: 16px;
+        }
+
+        #size-selector {
+            padding: 0 8px 0 8px;
+            padding-right: 32px;
+        }
+
+        select:focus {
+            outline: none;
+            border-color: #166fe5;
+        }
+
+        select option {
+            padding: 8px 12px;
+            background-color: #ffffff;
+            color: #000000;
+            text-align: center;
+        }
+
+        /* Style for top-bar buttons */
+        .top-bar button {
+            height: 36px;
+            padding: 0 8px;
+            border: 1px solid #444444;
+            background-color: #1877f2;
+            color: #ffffff;
+            border-radius: 0;
+            font-size: 14px;
+            box-sizing: border-box;
+            margin-right: 0;
+            white-space: nowrap;
+            cursor: pointer;
+        }
+
+        .top-bar button:hover {
+            background-color: #166fe5;
+        }
+
+        .top-bar button:disabled {
+            background-color: #666666;
+            cursor: not-allowed;
+        }
+
+        /* Style for layout name input */
+        #layout-name-input {
+            height: 36px;
+            padding: 0 8px;
+            border: 1px solid #444444;
+            background-color: #1877f2;
+            color: #ffffff;
+            border-radius: 0;
+            font-size: 14px;
+            box-sizing: border-box;
+            margin-right: 0;
+            width: 120px;
+        }
+
+        #layout-name-input:focus {
+            outline: none;
+            border-color: #166fe5;
+        }
+
+        #layout-name-input::placeholder {
+            color: #ffffff;
+            opacity: 0.7;
+        }
     </style>
 </head>
 <body>
     <div class="main-container">
         <div class="sidebar">
-            <button id="load-directory-btn">Load Directory</button>
+            <div class="sidebar-buttons">
+                <button class="sidebar-cog-btn" id="cog-btn">⚙</button>
+                <button id="load-directory-btn">Load Directory</button>
+            </div>
         </div>
         <div class="main-content">
             <div class="top-bar">
@@ -217,11 +353,16 @@
                     <option value="0.9">90%</option>
                     <option value="1" selected>100%</option>
                 </select>
-                <button id="sort-by-name-btn">Sort by Name</button>
-                <button id="sort-randomly-btn">Sort Randomly</button>
-                <input type="text" id="layout-name-input" placeholder="Layout Name" style="width: 120px;">
+                <select id="sort-selector">
+                    <option value="">Sort</option>
+                    <option value="name">Name</option>
+                    <option value="random">Random</option>
+                </select>
+                <input type="text" id="layout-name-input" placeholder="Layout Name">
                 <button id="save-layout-btn">Save Layout</button>
-                <select id="layout-select"></select>
+                <select id="layout-select">
+                    <option value="">Select Layout</option>
+                </select>
                 <button id="load-layout-btn">Load Layout</button>
                 <button id="delete-layout-btn">Delete Layout</button>
                 <button id="play-btn" disabled>Play</button>
@@ -241,6 +382,7 @@
                 <div id="selection-box"></div>
                 <div id="content-spacer" style="position: absolute; top: 0; left: 0; z-index: -1;"></div>
             </div>
+            <div class="bottom-bar"></div>
         </div>
     </div>
 
@@ -314,8 +456,6 @@
         let directoryName = '';
         let zIndexCounter = 1000;
         const loadButton = document.getElementById('load-directory-btn');
-        const sortByNameBtn = document.getElementById('sort-by-name-btn');
-        const sortRandomlyBtn = document.getElementById('sort-randomly-btn');
         const saveLayoutBtn = document.getElementById('save-layout-btn');
         const layoutNameInput = document.getElementById('layout-name-input');
         const layoutSelect = document.getElementById('layout-select');
@@ -335,6 +475,8 @@
         const deselectAllBtn = document.getElementById('deselect-all-btn');
         const hideBtn = document.getElementById('hide-btn');
         let isMultiSelectMode = false;
+        const sortSelector = document.getElementById('sort-selector');
+        const cogBtn = document.getElementById('cog-btn');
         
         let canvases = new Map();
         let activeCanvasId = 1;
@@ -476,8 +618,28 @@
             }
         });
 
-        sortByNameBtn.addEventListener('click', () => sortThumbnails('name'));
-        sortRandomlyBtn.addEventListener('click', () => sortThumbnails('random'));
+        cogBtn.addEventListener('click', async () => {
+            try {
+                const dirHandle = await getDb('lastDirectory');
+                if (dirHandle) {
+                    const hasPermission = await dirHandle.queryPermission({ mode: 'read' }) === 'granted' ||
+                                          await dirHandle.requestPermission({ mode: 'read' }) === 'granted';
+                    if (hasPermission) {
+                        await processDirectory(dirHandle);
+                    }
+                }
+            } catch (err) {
+                console.error('Could not load last directory:', err);
+            }
+        });
+
+        sortSelector.addEventListener('change', (e) => {
+            const value = e.target.value;
+            if (value) {
+                sortThumbnails(value);
+            }
+        });
+
         saveLayoutBtn.addEventListener('click', saveLayout);
         loadLayoutBtn.addEventListener('click', loadLayout);
         multiSelectBtn.addEventListener('click', () => {
@@ -1114,7 +1276,7 @@
             const savedLayoutNames = Object.keys(savedLayouts);
             const scanLayoutNames = Object.keys(scanLayouts);
 
-            layoutSelect.innerHTML = '<option value="">- Select Layout -</option>';
+            layoutSelect.innerHTML = '<option value="">Select Layout</option>';
 
             if (scanLayoutNames.length > 0) {
                 const scanGroup = document.createElement('optgroup');
