@@ -236,7 +236,6 @@
                     <option value="">Send to...</option>
                 </select>
                 <button id="close-canvas-btn" disabled>Close Canvas</button>
-                <span id="selected-filename-display" style="margin-left: 10px;"></span>
             </div>
             <div id="thumbnail-container">
                 <div id="selection-box"></div>
@@ -335,7 +334,6 @@
         const closeCanvasBtn = document.getElementById('close-canvas-btn');
         const deselectAllBtn = document.getElementById('deselect-all-btn');
         const hideBtn = document.getElementById('hide-btn');
-        const selectedFilenameDisplay = document.getElementById('selected-filename-display');
         let isMultiSelectMode = false;
         
         let canvases = new Map();
@@ -425,13 +423,6 @@
             sendToCanvasSelect.disabled = numSelected === 0;
             hideBtn.disabled = numSelected === 0;
 
-            if (numSelected === 1) {
-                const selectedThumb = selectedThumbnails.values().next().value;
-                const fileName = selectedThumb.dataset.fileName;
-                selectedFilenameDisplay.textContent = fileName.substring(0, fileName.lastIndexOf('.'));
-            } else {
-                selectedFilenameDisplay.textContent = '';
-            }
         }
 
         function updateContentSpacer() {
