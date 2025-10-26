@@ -30,7 +30,7 @@
             height: 36px;
         }
         .sidebar-cog-btn {
-            width: 20%;
+            width: 100%;
             height: 36px;
             border: 1px solid #444444;
             background-color: #1877f2;
@@ -278,8 +278,8 @@
 
         select option {
             padding: 8px 12px;
-            background-color: #ffffff;
-            color: #000000;
+            background-color: #1877f2;
+            color: #ffffff;
             text-align: center;
         }
 
@@ -330,13 +330,65 @@
             color: #ffffff;
             opacity: 0.7;
         }
+
+        .dropdown {
+            position: relative;
+            height: 100%;
+        }
+
+        .dropdown-content {
+            display: none;
+            position: absolute;
+            background-color: #1877f2;
+            min-width: 160px;
+            box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+            z-index: 1;
+        }
+
+        .dropdown-content a {
+            color: #ffffff;
+            padding: 12px 16px;
+            text-decoration: none;
+            display: block;
+        }
+
+        .dropdown-content a:hover {background-color: #166fe5;}
+
+        .nested-dropdown {
+            position: relative;
+        }
+
+        .nested-dropdown-content {
+            display: none;
+            position: absolute;
+            left: 100%;
+            top: 0;
+            background-color: #1877f2;
+            min-width: 160px;
+            box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+        }
+
+        .nested-dropdown-content.show {
+            display: block;
+        }
     </style>
 </head>
 <body>
     <div class="main-container">
         <div class="sidebar">
             <div class="sidebar-buttons">
-                <button class="sidebar-cog-btn" id="cog-btn">⚙</button>
+                <div class="dropdown">
+                    <button class="sidebar-cog-btn" id="cog-btn">⚙</button>
+                    <div class="dropdown-content" id="cog-dropdown">
+                        <a href="#" id="rename-canvas-btn">Rename Canvas</a>
+                        <div class="nested-dropdown">
+                            <a href="#">Recent Directories</a>
+                            <div class="nested-dropdown-content" id="recent-directories-list">
+                                <!-- Populated by JS -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
                 <button id="load-directory-btn">Load Directory</button>
             </div>
         </div>
@@ -365,7 +417,6 @@
                 </select>
                 <button id="load-layout-btn">Load Layout</button>
                 <button id="delete-layout-btn">Delete Layout</button>
-                <button id="play-btn" disabled>Play</button>
                 <button id="multi-select-btn">Multi Select</button>
                 <button id="deselect-all-btn">Deselect All</button>
                 <button id="hide-btn" disabled>Hide</button>
@@ -377,6 +428,7 @@
                     <option value="">Send to...</option>
                 </select>
                 <button id="close-canvas-btn" disabled>Close Canvas</button>
+                <button id="play-btn" disabled>Play</button>
             </div>
             <div id="thumbnail-container">
                 <div id="selection-box"></div>
@@ -472,6 +524,7 @@
         const multiSelectBtn = document.getElementById('multi-select-btn');
         const sendToCanvasSelect = document.getElementById('send-to-canvas-select');
         const closeCanvasBtn = document.getElementById('close-canvas-btn');
+        const renameCanvasBtn = document.getElementById('rename-canvas-btn');
         const deselectAllBtn = document.getElementById('deselect-all-btn');
         const hideBtn = document.getElementById('hide-btn');
         let isMultiSelectMode = false;
@@ -593,6 +646,7 @@
         async function init() {
             const savedSize = localStorage.getItem('thumbnailSize') || '1';
             sizeSelector.value = savedSize;
+            await loadRecentDirectories();
 
             try {
                 const dirHandle = await getDb('lastDirectory');
@@ -618,19 +672,38 @@
             }
         });
 
-        cogBtn.addEventListener('click', async () => {
-            try {
-                const dirHandle = await getDb('lastDirectory');
-                if (dirHandle) {
-                    const hasPermission = await dirHandle.queryPermission({ mode: 'read' }) === 'granted' ||
-                                          await dirHandle.requestPermission({ mode: 'read' }) === 'granted';
-                    if (hasPermission) {
-                        await processDirectory(dirHandle);
-                    }
+        cogBtn.addEventListener('click', (event) => {
+            event.stopPropagation();
+            const dropdown = document.getElementById('cog-dropdown');
+            dropdown.style.display = dropdown.style.display === 'block' ? 'none' : 'block';
+        });
+
+        window.addEventListener('click', (event) => {
+            if (!event.target.matches('.sidebar-cog-btn')) {
+                const dropdown = document.getElementById('cog-dropdown');
+                if (dropdown.style.display === 'block') {
+                    dropdown.style.display = 'none';
                 }
-            } catch (err) {
-                console.error('Could not load last directory:', err);
             }
+        });
+
+        renameCanvasBtn.addEventListener('click', () => {
+            const currentCanvas = canvases.get(activeCanvasId);
+            if (currentCanvas) {
+                const newName = prompt('Enter new name for the canvas:', currentCanvas.name);
+                if (newName && newName.trim() !== '') {
+                    currentCanvas.name = newName.trim();
+                    document.title = newName.trim();
+                    populateCanvasDropdown();
+                }
+            }
+            document.getElementById('cog-dropdown').style.display = 'none';
+        });
+
+        document.querySelector('.nested-dropdown a').addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            document.getElementById('recent-directories-list').classList.toggle('show');
         });
 
         sortSelector.addEventListener('change', (e) => {
@@ -805,6 +878,19 @@
 
         async function processDirectory(dirHandle) {
             await setDb('lastDirectory', dirHandle);
+            
+            let recentDirs = await getDb('recentDirectories') || [];
+            const existingIndex = recentDirs.findIndex(dir => dir.name === dirHandle.name);
+            if (existingIndex > -1) {
+                recentDirs.splice(existingIndex, 1);
+            }
+            recentDirs.unshift({name: dirHandle.name, handle: dirHandle});
+            if (recentDirs.length > 5) {
+                recentDirs = recentDirs.slice(0, 5);
+            }
+            await setDb('recentDirectories', recentDirs);
+            await loadRecentDirectories();
+
             directoryName = dirHandle.name;
             isLayoutFrozen = false;
             selectedThumbnails.clear();
@@ -945,6 +1031,48 @@
                 scriptModal.style.display = 'block';
             }
             populateLayoutsDropdown();
+        }
+
+        async function loadRecentDirectories() {
+            const recentDirs = await getDb('recentDirectories') || [];
+            const list = document.getElementById('recent-directories-list');
+            list.innerHTML = '';
+
+            if (recentDirs.length > 0) {
+                for (const dir of recentDirs) {
+                    const a = document.createElement('a');
+                    a.href = '#';
+                    a.textContent = dir.name;
+                    a.title = dir.name;
+                    a.addEventListener('click', async (e) => {
+                        e.preventDefault();
+                        try {
+                            const hasPermission = await dir.handle.queryPermission({ mode: 'read' }) === 'granted' ||
+                                                  await dir.handle.requestPermission({ mode: 'read' }) === 'granted';
+                            if (hasPermission) {
+                                await processDirectory(dir.handle);
+                            }
+                        } catch(e) {
+                            alert('Could not access directory. It may have been moved or deleted.');
+                            await removeDirectory(dir.name);
+                        }
+                    });
+                    list.appendChild(a);
+                }
+            } else {
+                const a = document.createElement('a');
+                a.href = '#';
+                a.textContent = 'No recent directories';
+                a.style.pointerEvents = 'none';
+                list.appendChild(a);
+            }
+        }
+
+        async function removeDirectory(dirName) {
+            let recentDirs = await getDb('recentDirectories') || [];
+            recentDirs = recentDirs.filter(d => d.name !== dirName);
+            await setDb('recentDirectories', recentDirs);
+            await loadRecentDirectories();
         }
         
         window.onload = init;
