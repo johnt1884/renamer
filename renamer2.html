@@ -24,6 +24,31 @@
             display: flex;
             flex-direction: column;
             flex-shrink: 0;
+            position: relative; /* Needed for the resizer */
+        }
+
+        #sidebar-resizer {
+            position: absolute;
+            top: 0;
+            right: -5px; /* Positioned slightly outside the border */
+            width: 10px;
+            height: 100%;
+            cursor: col-resize;
+            z-index: 100;
+        }
+        #sidebar-scroll-container {
+            flex-grow: 1;
+            overflow-y: auto;
+            height: 0;
+        }
+        .sidebar-section h4, .sidebar-subcategory h5 {
+            color: black;
+            margin: 10px 0 5px 8px;
+            cursor: pointer;
+            user-select: none;
+        }
+        .sidebar-subcategory h5 {
+            margin-left: 16px;
         }
         .sidebar-buttons {
             display: flex;
@@ -278,9 +303,13 @@
 
         select option {
             padding: 8px 12px;
-            background-color: #1877f2;
-            color: #ffffff;
+            background-color: #ffffff;
+            color: #000000;
             text-align: center;
+        }
+
+        select option:nth-child(even) {
+            background-color: #f2f2f2;
         }
 
         /* Style for top-bar buttons */
@@ -339,20 +368,25 @@
         .dropdown-content {
             display: none;
             position: absolute;
-            background-color: #1877f2;
+            background-color: #ffffff;
+            color: #000000;
             min-width: 160px;
             box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
             z-index: 1;
         }
 
         .dropdown-content a {
-            color: #ffffff;
+            color: #000000;
             padding: 12px 16px;
             text-decoration: none;
             display: block;
         }
 
-        .dropdown-content a:hover {background-color: #166fe5;}
+        .dropdown-content a:nth-child(even) {
+            background-color: #f2f2f2;
+        }
+
+        .dropdown-content a:hover {background-color: #f1f1f1;}
 
         .nested-dropdown {
             position: relative;
@@ -363,7 +397,7 @@
             position: absolute;
             left: 100%;
             top: 0;
-            background-color: #1877f2;
+            background-color: #ffffff;
             min-width: 160px;
             box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
         }
@@ -371,16 +405,125 @@
         .nested-dropdown-content.show {
             display: block;
         }
+
+        .sidebar-section button.selected-for-removal {
+            background-color: #ff4d4d !important;
+            border: 1px solid #ffffff;
+        }
+
+        .disabled-btn {
+            background-color: #666666 !important;
+            cursor: not-allowed !important;
+        }
+
+        /* Styles for the new filename builder panel */
+        .filename-builder-modal-content {
+            background-color: #ffffff;
+            margin: 5% auto;
+            padding: 24px;
+            border: none;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 720px; /* Wider for more complex builder */
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            animation: fadeIn 0.3s;
+            color: #000000; /* Set default text color for the modal */
+        }
+
+        #filename-preview {
+            background-color: #f0f0f0;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+            font-family: monospace;
+            min-height: 24px;
+            border: 1px solid #ddd;
+            word-wrap: break-word;
+        }
+
+        .filename-part-row {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .filename-part-row input[type="text"],
+        .filename-part-row select {
+            flex-grow: 1;
+            margin-right: 8px;
+            height: 36px;
+            padding: 0 8px;
+            border: 1px solid #444444;
+            background-color: #ffffff;
+            color: #000000;
+            border-radius: 0;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+
+        .filename-part-row button {
+            height: 36px;
+            width: 36px;
+            border: 1px solid #444444;
+            background-color: #f2f2f2;
+            color: #000000;
+            cursor: pointer;
+        }
+
+        #add-filename-part-controls {
+            display: flex;
+            align-items: center;
+            margin-top: 15px;
+        }
+        
+        #add-filename-part-controls button {
+            height: 36px;
+            width: 36px;
+            margin-right: 8px;
+             border: 1px solid #444444;
+            background-color: #1877f2;
+            color: #ffffff;
+            font-size: 20px;
+            cursor: pointer;
+        }
+
+         #add-filename-part-controls select {
+            height: 36px;
+            padding: 0 8px;
+            border: 1px solid #444444;
+            background-color: #ffffff;
+            color: #000000;
+         }
+
+        #create-filename-button-btn {
+            background-color: #1877f2;
+            color: #ffffff;
+            border: 1px solid #444444;
+            border-radius: 0;
+            font-size: 14px;
+            height: 36px;
+            padding: 0 16px;
+            cursor: pointer;
+            display: block;
+            margin-top: 20px;
+        }
     </style>
 </head>
 <body>
     <div class="main-container">
-        <div class="sidebar">
+        <div class="sidebar" id="sidebar">
+            <div id="sidebar-resizer"></div>
             <div class="sidebar-buttons">
                 <div class="dropdown">
                     <button class="sidebar-cog-btn" id="cog-btn">⚙</button>
                     <div class="dropdown-content" id="cog-dropdown">
+                        <div id="project-username-container" style="padding: 12px 16px;">
+                            <label for="project-username-input" style="display: block; margin-bottom: 5px;">Project Username</label>
+                            <input type="text" id="project-username-input" style="width: 100%; box-sizing: border-box; background-color: #ffffff; border: 1px solid #444; color: black; padding: 4px;">
+                        </div>
                         <a href="#" id="rename-canvas-btn">Rename Canvas</a>
+                        <a href="#" id="scan-for-buttons-btn">Scan for Buttons</a>
+                        <a href="#" id="remove-all-buttons-btn">Remove All Buttons</a>
                         <div class="nested-dropdown">
                             <a href="#">Recent Directories</a>
                             <div class="nested-dropdown-content" id="recent-directories-list">
@@ -390,6 +533,9 @@
                     </div>
                 </div>
                 <button id="load-directory-btn">Load Directory</button>
+            </div>
+            <div id="sidebar-scroll-container">
+                <!-- Custom buttons will be loaded here -->
             </div>
         </div>
         <div class="main-content">
@@ -406,14 +552,14 @@
                     <option value="1" selected>100%</option>
                 </select>
                 <select id="sort-selector">
-                    <option value="">Sort</option>
+                    <option value="" disabled hidden>Sort</option>
                     <option value="name">Name</option>
                     <option value="random">Random</option>
                 </select>
                 <input type="text" id="layout-name-input" placeholder="Layout Name">
                 <button id="save-layout-btn">Save Layout</button>
                 <select id="layout-select">
-                    <option value="">Select Layout</option>
+                    <option value="" disabled hidden>Select Layout</option>
                 </select>
                 <button id="load-layout-btn">Load Layout</button>
                 <button id="delete-layout-btn">Delete Layout</button>
@@ -425,7 +571,7 @@
                     <option value="1">Canvas 1</option>
                 </select>
                 <select id="send-to-canvas-select" disabled>
-                    <option value="">Send to...</option>
+                    <option value="" disabled hidden>Send to...</option>
                 </select>
                 <button id="close-canvas-btn" disabled>Close Canvas</button>
                 <button id="play-btn" disabled>Play</button>
@@ -434,7 +580,34 @@
                 <div id="selection-box"></div>
                 <div id="content-spacer" style="position: absolute; top: 0; left: 0; z-index: -1;"></div>
             </div>
-            <div class="bottom-bar"></div>
+            <div class="bottom-bar">
+            <button id="new-filename-btn" style="height: 36px; padding: 0 12px; border: 1px solid #444444; background-color: #1877f2; color: #ffffff; border-radius: 0; font-size: 14px; box-sizing: border-box; cursor: pointer; margin-right: 0;">New</button>
+                <button id="remove-btn" style="height: 36px; padding: 0 12px; border: 1px solid #444444; background-color: #1877f2; color: #ffffff; border-radius: 0; font-size: 14px; box-sizing: border-box; cursor: pointer;">Remove</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="filename-builder-modal" class="modal">
+        <div class="filename-builder-modal-content">
+            <span class="close">&times;</span>
+            <h2>Create New Filename Button</h2>
+            <p>Build a filename structure. The button will be created in the sidebar.</p>
+            
+            <h4>Preview:</h4>
+            <div id="filename-preview"></div>
+
+            <div id="filename-parts-container">
+                <!-- Dynamic parts will be added here -->
+            </div>
+
+            <datalist id="previous-sections-list"></datalist>
+            <datalist id="previous-values-list"></datalist>
+
+            <div id="add-filename-part-controls">
+                <button id="add-part-btn">+</button>
+            </div>
+
+            <button id="create-filename-button-btn">Add Button</button>
         </div>
     </div>
 
@@ -498,6 +671,7 @@
         const directoryPicker = document.getElementById('directory-picker');
         const thumbnailContainer = document.getElementById('thumbnail-container');
         const scriptModal = document.getElementById('script-modal');
+        const filenameBuilderModal = document.getElementById('filename-builder-modal');
         const batchScriptTextArea = document.getElementById('batch-script');
         const copyScriptBtn = document.getElementById('copy-script-btn');
         const downloadScriptLink = document.getElementById('download-script-link');
@@ -505,7 +679,7 @@
         const closeModal = document.querySelector('.close');
         const sizeSelector = document.getElementById('size-selector');
         let isLayoutFrozen = false;
-        let directoryName = '';
+        var directoryName = '';
         let zIndexCounter = 1000;
         const loadButton = document.getElementById('load-directory-btn');
         const saveLayoutBtn = document.getElementById('save-layout-btn');
@@ -525,15 +699,36 @@
         const sendToCanvasSelect = document.getElementById('send-to-canvas-select');
         const closeCanvasBtn = document.getElementById('close-canvas-btn');
         const renameCanvasBtn = document.getElementById('rename-canvas-btn');
+        const scanForButtonsBtn = document.getElementById('scan-for-buttons-btn');
+        const removeAllButtonsBtn = document.getElementById('remove-all-buttons-btn');
         const deselectAllBtn = document.getElementById('deselect-all-btn');
         const hideBtn = document.getElementById('hide-btn');
         let isMultiSelectMode = false;
         const sortSelector = document.getElementById('sort-selector');
         const cogBtn = document.getElementById('cog-btn');
+        const newFilenameBtn = document.getElementById('new-filename-btn');
+        const removeBtn = document.getElementById('remove-btn');
         
+        let buttonsForRemoval = new Set();
+        let filenameParts = [];
+        const filenamePreview = document.getElementById('filename-preview');
+        const filenamePartsContainer = document.getElementById('filename-parts-container');
+        const addPartBtn = document.getElementById('add-part-btn');
+        const createFilenameButtonBtn = document.getElementById('create-filename-button-btn');
+
         let canvases = new Map();
         let activeCanvasId = 1;
         let allThumbnails = [];
+
+        function updateRemoveButtonState() {
+            if (buttonsForRemoval.size === 0) {
+                removeBtn.classList.add('disabled-btn');
+                removeBtn.disabled = true;
+            } else {
+                removeBtn.classList.remove('disabled-btn');
+                removeBtn.disabled = false;
+            }
+        }
 
         function getNextCanvasId() {
             let i = 1;
@@ -559,7 +754,7 @@
             }
 
             const currentCanvas = canvases.get(activeCanvasId);
-            closeCanvasBtn.disabled = !(currentCanvas && currentCanvas.thumbnails.length === 0 && canvases.size > 1);
+            closeCanvasBtn.disabled = !(currentCanvas && currentCanvas.thumbnails.length === 0 && canvases.size > 1 && currentCanvas.name !== 'Renamed');
             
             populateCanvasDropdown();
             updateContentSpacer();
@@ -568,7 +763,7 @@
 
         function populateCanvasDropdown() {
             canvasSelect.innerHTML = '';
-            sendToCanvasSelect.innerHTML = '<option value="">Send to...</option>';
+            sendToCanvasSelect.innerHTML = '<option value="" disabled selected hidden>Send to...</option>';
             for (const canvas of canvases.values()) {
                 const option = document.createElement('option');
                 option.value = canvas.id;
@@ -647,15 +842,17 @@
             const savedSize = localStorage.getItem('thumbnailSize') || '1';
             sizeSelector.value = savedSize;
             await loadRecentDirectories();
+            updateRemoveButtonState();
 
             try {
                 const dirHandle = await getDb('lastDirectory');
                 if (dirHandle) {
-                    const hasPermission = await dirHandle.queryPermission({ mode: 'read' }) === 'granted' ||
-                                          await dirHandle.requestPermission({ mode: 'read' }) === 'granted';
-                    if (hasPermission) {
-                        await processDirectory(dirHandle);
+                    if (await dirHandle.queryPermission({ mode: 'read' }) !== 'granted') {
+                        if (await dirHandle.requestPermission({ mode: 'read' }) !== 'granted') {
+                            throw new Error('Permission to access the last directory was denied.');
+                        }
                     }
+                    await processDirectory(dirHandle);
                 }
             } catch (err) {
                 console.error('Could not auto-load directory:', err);
@@ -678,6 +875,18 @@
             dropdown.style.display = dropdown.style.display === 'block' ? 'none' : 'block';
         });
 
+        const projectUsernameInput = document.getElementById('project-username-input');
+        projectUsernameInput.addEventListener('change', () => {
+            if (directoryName) {
+                localStorage.setItem(`${directoryName}-projectUsername`, projectUsernameInput.value);
+            }
+            updateFilenamePreview();
+        });
+
+        document.getElementById('project-username-container').addEventListener('click', (event) => {
+            event.stopPropagation();
+        });
+
         window.addEventListener('click', (event) => {
             if (!event.target.matches('.sidebar-cog-btn')) {
                 const dropdown = document.getElementById('cog-dropdown');
@@ -690,6 +899,10 @@
         renameCanvasBtn.addEventListener('click', () => {
             const currentCanvas = canvases.get(activeCanvasId);
             if (currentCanvas) {
+                if (currentCanvas.name === 'Renamed') {
+                    alert('The "Renamed" canvas cannot be renamed.');
+                    return;
+                }
                 const newName = prompt('Enter new name for the canvas:', currentCanvas.name);
                 if (newName && newName.trim() !== '') {
                     currentCanvas.name = newName.trim();
@@ -700,16 +913,104 @@
             document.getElementById('cog-dropdown').style.display = 'none';
         });
 
-        document.querySelector('.nested-dropdown a').addEventListener('click', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            document.getElementById('recent-directories-list').classList.toggle('show');
+        removeAllButtonsBtn.addEventListener('click', () => {
+            if (confirm('Are you sure you want to remove all custom buttons for this directory?')) {
+                localStorage.setItem(`${directoryName}-customButtons`, '[]');
+                loadCustomButtons(); // This will clear the sidebar
+                alert('All custom buttons have been removed.');
+            }
+            document.getElementById('cog-dropdown').style.display = 'none';
         });
+
+        scanForButtonsBtn.addEventListener('click', async () => {
+            let username = projectUsernameInput.value.trim();
+            if (!username) {
+                username = prompt('Please enter a Project Username to scan for matching filenames:');
+                if (username) {
+                    projectUsernameInput.value = username;
+                    projectUsernameInput.dispatchEvent(new Event('change')); // Save it
+                } else {
+                    alert('Scan cancelled. A Project Username is required.');
+                    return;
+                }
+            }
+
+            const savedButtons = JSON.parse(localStorage.getItem(`${directoryName}-customButtons`) || '[]');
+            const existingButtons = new Set(savedButtons.map(b => `${b.section}|${b.subCategory}|${b.buttonText}`));
+            let newButtonsCreated = 0;
+
+            const regex = new RegExp(`^\\[${username}\\]_(\\w+)\\s*(.*)`);
+
+            allVideoFiles.forEach(file => {
+                const match = file.name.match(regex);
+                if (match) {
+                    const section = match[1];
+                    let rawButtonText = match[2] || '';
+                    
+                    rawButtonText = rawButtonText.substring(0, rawButtonText.lastIndexOf('.')).trim();
+                    rawButtonText = rawButtonText.replace(/\s*\(\d+\)$/, '').trim();
+
+                    const subCategoryMatch = rawButtonText.match(/^\(([^)]+)\)/);
+                    let subCategory = '';
+                    let buttonText = rawButtonText;
+
+                    if (subCategoryMatch) {
+                        const fullSubCategory = subCategoryMatch[1];
+                        const words = fullSubCategory.split(/\s+/);
+                        subCategory = words.slice(0, 2).join(' ');
+                        buttonText = rawButtonText.substring(subCategoryMatch[0].length).trim();
+                    }
+
+                    if (section && subCategory && buttonText && !existingButtons.has(`${section}|${subCategory}|${buttonText}`)) {
+                        const newButtonData = {
+                            id: Date.now() + Math.random(),
+                            section: section,
+                            subCategory: subCategory,
+                            buttonText: buttonText
+                        };
+                        savedButtons.push(newButtonData);
+                        existingButtons.add(`${section}|${subCategory}|${buttonText}`);
+                        newButtonsCreated++;
+                    }
+                }
+            });
+
+            if (newButtonsCreated > 0) {
+                localStorage.setItem(`${directoryName}-customButtons`, JSON.stringify(savedButtons));
+                await loadCustomButtons();
+                alert(`${newButtonsCreated} new button(s) created successfully!`);
+            } else {
+                alert('No new buttons were found based on the filenames and the current Project Username.');
+            }
+            
+            document.getElementById('cog-dropdown').style.display = 'none';
+        });
+
+        const nestedDropdown = document.querySelector('.nested-dropdown');
+        const recentDirectoriesList = document.getElementById('recent-directories-list');
+        let leaveTimeout;
+
+        const showRecentDirs = () => {
+            clearTimeout(leaveTimeout);
+            recentDirectoriesList.classList.add('show');
+        };
+
+        const hideRecentDirs = () => {
+            leaveTimeout = setTimeout(() => {
+                recentDirectoriesList.classList.remove('show');
+            }, 500);
+        };
+
+        nestedDropdown.addEventListener('mouseenter', showRecentDirs);
+        nestedDropdown.addEventListener('mouseleave', hideRecentDirs);
+        recentDirectoriesList.addEventListener('mouseenter', showRecentDirs);
+        recentDirectoriesList.addEventListener('mouseleave', hideRecentDirs);
 
         sortSelector.addEventListener('change', (e) => {
             const value = e.target.value;
             if (value) {
                 sortThumbnails(value);
+                e.target.value = ''; // Reset to placeholder
             }
         });
 
@@ -810,7 +1111,7 @@
             }
         });
 
-        function sendThumbnailsToCanvas(targetCanvasId) {
+        function sendThumbnailsToCanvas(targetCanvasId, clearSelection = true) {
             const targetCanvas = canvases.get(targetCanvasId);
             if (!targetCanvas) return;
 
@@ -819,10 +1120,14 @@
             selectedThumbnails.forEach(thumb => {
                 currentCanvas.thumbnails = currentCanvas.thumbnails.filter(t => t !== thumb);
                 targetCanvas.thumbnails.push(thumb);
-                thumb.classList.remove('selected');
+                if(clearSelection) {
+                    thumb.classList.remove('selected');
+                }
             });
-            
-            selectedThumbnails.clear();
+
+            if (clearSelection) {
+                selectedThumbnails.clear();
+            }
             renderCanvas(activeCanvasId); // Re-render the current canvas to show the items have moved
             updatePlayButtonState();
         }
@@ -892,6 +1197,8 @@
             await loadRecentDirectories();
 
             directoryName = dirHandle.name;
+            projectUsernameInput.value = localStorage.getItem(`${directoryName}-projectUsername`) || '';
+            loadCustomButtons();
             isLayoutFrozen = false;
             selectedThumbnails.clear();
             updatePlayButtonState();
@@ -986,7 +1293,12 @@
                     } else {
                         canvases.set(1, { id: 1, name: 'Canvas 1', thumbnails: [...allThumbnails] });
                         activeCanvasId = 1;
-                        nextCanvasId = 2;
+                    }
+
+                    let renamedCanvas = Array.from(canvases.values()).find(c => c.name === 'Renamed');
+                    if (!renamedCanvas) {
+                        const renamedCanvasId = getNextCanvasId();
+                        canvases.set(renamedCanvasId, { id: renamedCanvasId, name: 'Renamed', thumbnails: [] });
                     }
 
                     allThumbnails.forEach(img => {
@@ -1117,6 +1429,362 @@
 
         reloadPageBtn.addEventListener('click', () => {
             location.reload();
+        });
+        
+        function initializeFilenameBuilder() {
+            filenamePartsContainer.innerHTML = '';
+            filenameParts = [{ type: 'section', value: '' }];
+            renderFilenameParts();
+            updateFilenamePreview();
+            populatePreviousValues();
+            populatePreviousSections();
+        }
+
+        function renderFilenameParts() {
+            filenamePartsContainer.innerHTML = '';
+            filenameParts.forEach((part, index) => {
+                const row = document.createElement('div');
+                row.className = 'filename-part-row';
+
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.value = part.value;
+
+                if (part.type === 'section') {
+                    input.placeholder = 'Section';
+                    input.setAttribute('list', 'previous-sections-list');
+                } else {
+                    input.placeholder = 'Subheading / Title';
+                    input.setAttribute('list', 'previous-values-list');
+                }
+
+                input.addEventListener('input', () => {
+                    part.value = input.value;
+                    updateFilenamePreview();
+                });
+
+                row.appendChild(input);
+
+                if (index > 0) { // Can't remove the 'Section'
+                    const removeBtn = document.createElement('button');
+                    removeBtn.textContent = '-';
+                    removeBtn.onclick = () => removeFilenamePart(index);
+                    row.appendChild(removeBtn);
+                }
+                filenamePartsContainer.appendChild(row);
+            });
+        }
+
+        function updateFilenamePreview() {
+            const username = projectUsernameInput.value || 'username';
+            const section = filenameParts[0]?.value || '';
+            const otherParts = filenameParts.slice(1)
+                .map(p => p.value.trim())
+                .filter(p => p) // Filter out empty strings
+                .map(p => `(${p})`)
+                .join(' ');
+            
+            filenamePreview.textContent = `[${username}]_${section}${section && otherParts ? ' ' : ''}${otherParts}`;
+        }
+
+        function addFilenamePart(value = '') {
+            filenameParts.push({ type: 'part', value });
+            renderFilenameParts();
+            updateFilenamePreview();
+        }
+
+        function removeFilenamePart(index) {
+            filenameParts.splice(index, 1);
+            renderFilenameParts();
+            updateFilenamePreview();
+        }
+
+        function getPreviousValues() {
+            return JSON.parse(localStorage.getItem('previousFilenameValues') || '[]');
+        }
+
+        function populatePreviousValues() {
+            const values = getPreviousValues();
+            const datalist = document.getElementById('previous-values-list');
+            datalist.innerHTML = '';
+            values.forEach(val => {
+                const option = document.createElement('option');
+                option.value = val;
+                datalist.appendChild(option);
+            });
+        }
+
+        function getPreviousSections() {
+            return JSON.parse(localStorage.getItem('previousFilenameSections') || '[]');
+        }
+
+        function populatePreviousSections() {
+            const sections = getPreviousSections();
+            const datalist = document.getElementById('previous-sections-list');
+            datalist.innerHTML = '';
+            sections.forEach(val => {
+                const option = document.createElement('option');
+                option.value = val;
+                datalist.appendChild(option);
+            });
+        }
+
+        addPartBtn.addEventListener('click', () => addFilenamePart());
+
+        createFilenameButtonBtn.addEventListener('click', () => {
+            const section = filenameParts[0]?.value.trim();
+            if (!section) {
+                alert('The "Section" is required.');
+                return;
+            }
+
+            const parts = filenameParts.slice(1).map(p => p.value.trim()).filter(p => p);
+            if (parts.length < 1) {
+                alert('Please add at least one subheading or title.');
+                return;
+            }
+            
+            const fullSubCategory = parts[0];
+            const words = fullSubCategory.split(/\s+/);
+            const subCategory = words.slice(0, 2).join(' ');
+            
+            // Reconstruct buttonText based on what wasn't used in the subCategory
+            const remainingSubCategoryWords = words.slice(2);
+            const otherParts = parts.slice(1);
+            let buttonTextParts = [];
+            if (remainingSubCategoryWords.length > 0) {
+                buttonTextParts.push(remainingSubCategoryWords.join(' '));
+            }
+            buttonTextParts = buttonTextParts.concat(otherParts);
+            const buttonText = buttonTextParts.map(p => `(${p})`).join(' ');
+
+            // Save the new non-section values for future use
+            const previousValues = getPreviousValues();
+            buttonTextParts.forEach(p => {
+                const val = p.trim();
+                if (val && !previousValues.includes(val)) {
+                    previousValues.push(val);
+                }
+            });
+            localStorage.setItem('previousFilenameValues', JSON.stringify(previousValues));
+
+            // --- Save section for future use ---
+            const previousSections = getPreviousSections();
+            if (section && !previousSections.includes(section)) {
+                previousSections.push(section);
+                localStorage.setItem('previousFilenameSections', JSON.stringify(previousSections));
+            }
+            
+            // --- Save button data for persistence ---
+            const savedButtons = JSON.parse(localStorage.getItem(`${directoryName}-customButtons`) || '[]');
+            const newButtonData = {
+                id: Date.now(),
+                section: section,
+                subCategory: subCategory,
+                buttonText: buttonText
+            };
+            savedButtons.push(newButtonData);
+            localStorage.setItem(`${directoryName}-customButtons`, JSON.stringify(savedButtons));
+            
+            loadCustomButtons();
+
+            filenameBuilderModal.style.display = 'none';
+        });
+
+        async function loadCustomButtons() {
+            const scrollContainer = document.getElementById('sidebar-scroll-container');
+            scrollContainer.innerHTML = '';
+
+            let savedButtons = JSON.parse(localStorage.getItem(`${directoryName}-customButtons`) || '[]');
+            
+            let needsUpdate = false;
+            savedButtons.forEach(button => {
+                if (button.subCategory === undefined) {
+                    needsUpdate = true;
+                    // Attempt to parse subCategory from old buttonText format
+                    const subCategoryMatch = button.buttonText.match(/^\s*\(([^)]+)\)/);
+                    if (subCategoryMatch) {
+                        const fullSubCategory = subCategoryMatch[1];
+                        const words = fullSubCategory.split(/\s+/);
+                        button.subCategory = words.slice(0, 2).join(' ');
+                        button.buttonText = button.buttonText.substring(subCategoryMatch[0].length).trim();
+                    } else {
+                        // Assign a default subCategory if parsing fails
+                        button.subCategory = 'General';
+                    }
+                }
+            });
+
+            if (needsUpdate) {
+                localStorage.setItem(`${directoryName}-customButtons`, JSON.stringify(savedButtons));
+            }
+
+            const groupedButtons = savedButtons.reduce((acc, button) => {
+                acc[button.section] = acc[button.section] || {};
+                acc[button.section][button.subCategory] = acc[button.section][button.subCategory] || [];
+                acc[button.section][button.subCategory].push(button);
+                return acc;
+            }, {});
+
+            const sortState = JSON.parse(localStorage.getItem(`${directoryName}-sortState`) || '{}');
+
+            const createHeaderClickHandler = (type, key) => (event) => {
+                event.stopPropagation();
+                // Re-read the state from localStorage inside the handler to avoid closure issues
+                const currentSortState = JSON.parse(localStorage.getItem(`${directoryName}-sortState`) || '{}');
+                const currentVal = currentSortState[key] === undefined ? 1 : currentSortState[key];
+                currentSortState[key] = (currentVal + 1) % 3;
+                localStorage.setItem(`${directoryName}-sortState`, JSON.stringify(currentSortState));
+                loadCustomButtons();
+            };
+
+            for (const sectionName in groupedButtons) {
+                const sectionContainer = document.createElement('div');
+                sectionContainer.className = 'sidebar-section';
+                
+                const sectionHeader = document.createElement('h4');
+                const sectionKey = `section_${sectionName}`;
+                sortState[sectionKey] = sortState[sectionKey] || 1; // Default to creation order
+                sectionHeader.textContent = sectionName + (sortState[sectionKey] === 0 ? ' (Collapsed)' : sortState[sectionKey] === 1 ? ' (Original)' : ' (A-Z)');
+                sectionHeader.onclick = createHeaderClickHandler('section', sectionKey);
+                sectionContainer.appendChild(sectionHeader);
+
+                if (sortState[sectionKey] > 0) { // Not collapsed
+                    const subCategoryNames = Object.keys(groupedButtons[sectionName]);
+                    if (sortState[sectionKey] === 2) { // A-Z sort
+                        subCategoryNames.sort((a, b) => a.localeCompare(b));
+                    }
+
+                    subCategoryNames.forEach(subCategoryName => {
+                        const subCategoryContainer = document.createElement('div');
+                        subCategoryContainer.className = 'sidebar-subcategory';
+                        
+                        const subCategoryHeader = document.createElement('h5');
+                        const subCategoryKey = `subcategory_${sectionName}_${subCategoryName}`;
+                        sortState[subCategoryKey] = sortState[subCategoryKey] || 1;
+                        subCategoryHeader.textContent = subCategoryName + (sortState[subCategoryKey] === 0 ? ' (Collapsed)' : sortState[subCategoryKey] === 1 ? ' (Original)' : ' (A-Z)');
+                        subCategoryHeader.onclick = createHeaderClickHandler('subcategory', subCategoryKey);
+                        subCategoryContainer.appendChild(subCategoryHeader);
+                        
+                        if (sortState[subCategoryKey] > 0) {
+                            const buttonsContainer = document.createElement('div');
+                            buttonsContainer.className = 'buttons-container';
+                            let buttons = groupedButtons[sectionName][subCategoryName];
+
+                            if (sortState[subCategoryKey] === 2) { // A-Z sort
+                                buttons = [...buttons].sort((a, b) => a.buttonText.localeCompare(b.buttonText));
+                            }
+
+                            buttons.forEach(buttonData => {
+                                buttonsContainer.appendChild(createSidebarButton(buttonData));
+                            });
+                            subCategoryContainer.appendChild(buttonsContainer);
+                        }
+                        sectionContainer.appendChild(subCategoryContainer);
+                    });
+                }
+                scrollContainer.appendChild(sectionContainer);
+            }
+        }
+
+        function createSidebarButton(buttonData) {
+            const { id, buttonText } = buttonData;
+            
+            const button = document.createElement('button');
+            button.textContent = buttonText;
+            button.dataset.id = id;
+
+            button.onclick = () => {
+                const buttonId = button.dataset.id;
+                if (buttonsForRemoval.has(buttonId)) {
+                    buttonsForRemoval.delete(buttonId);
+                    button.classList.remove('selected-for-removal');
+                } else {
+                    buttonsForRemoval.add(buttonId);
+                    button.classList.add('selected-for-removal');
+                }
+                updateRemoveButtonState();
+            };
+
+            button.style.cssText = `
+                width: 100%;
+                margin: 0;
+                padding: 0;
+                height: 36px;
+                background-color: #1877f2;
+                color: #ffffff;
+                border: 1px solid #444444;
+                border-top: none;
+                border-radius: 0;
+                font-size: 14px;
+                cursor: pointer;
+                box-sizing: border-box;
+                text-align: left;
+                display: block;
+            `;
+            
+            adjustButtonFontSize(button);
+            return button;
+        }
+
+        async function adjustButtonFontSize(button) {
+            const FONT_SIZE_STEP = 0.5;
+            const MIN_FONT_SIZE = 6;
+            const MAX_FONT_SIZE = 18; // Set a reasonable max
+            let fontSize = 14;
+
+            await new Promise(resolve => requestAnimationFrame(resolve));
+
+            button.style.whiteSpace = 'nowrap';
+            button.style.fontSize = `${fontSize}px`;
+
+            // Decrease font size if text overflows
+            while (button.scrollWidth > button.clientWidth && fontSize > MIN_FONT_SIZE) {
+                fontSize -= FONT_SIZE_STEP;
+                button.style.fontSize = `${fontSize}px`;
+            }
+
+            // Increase font size if there's extra space
+            while (button.scrollWidth < button.clientWidth && fontSize < MAX_FONT_SIZE) {
+                const nextFontSize = fontSize + FONT_SIZE_STEP;
+                button.style.fontSize = `${nextFontSize}px`;
+                // If the new size makes it overflow, break the loop
+                if (button.scrollWidth > button.clientWidth) {
+                    button.style.fontSize = `${fontSize}px`; // Revert to the last fitting size
+                    break;
+                }
+                fontSize = nextFontSize;
+            }
+            button.style.whiteSpace = 'normal';
+        }
+
+        newFilenameBtn.addEventListener('click', () => {
+            filenameBuilderModal.style.display = 'block';
+            initializeFilenameBuilder();
+        });
+
+        removeBtn.addEventListener('click', () => {
+            if (buttonsForRemoval.size === 0) {
+                alert('Please select one or more buttons to remove.');
+                return;
+            }
+
+            if (confirm(`Are you sure you want to remove ${buttonsForRemoval.size} button(s)?`)) {
+                let savedButtons = JSON.parse(localStorage.getItem(`${directoryName}-customButtons`) || '[]');
+                
+                // Filter out the buttons that are marked for removal by their ID
+                savedButtons = savedButtons.filter(btnData => !buttonsForRemoval.has(String(btnData.id)));
+                
+                localStorage.setItem(`${directoryName}-customButtons`, JSON.stringify(savedButtons));
+
+                buttonsForRemoval.clear();
+                loadCustomButtons();
+                updateRemoveButtonState();
+            }
+        });
+
+        filenameBuilderModal.querySelector('.close').addEventListener('click', () => {
+            filenameBuilderModal.style.display = 'none';
         });
 
         function makeDraggable(element) {
@@ -1404,7 +2072,7 @@
             const savedLayoutNames = Object.keys(savedLayouts);
             const scanLayoutNames = Object.keys(scanLayouts);
 
-            layoutSelect.innerHTML = '<option value="">Select Layout</option>';
+            layoutSelect.innerHTML = '<option value="" disabled hidden>Select Layout</option>';
 
             if (scanLayoutNames.length > 0) {
                 const scanGroup = document.createElement('optgroup');
@@ -1497,6 +2165,24 @@
                 }
             });
             updatePlayButtonState();
+        }
+
+        const resizer = document.getElementById('sidebar-resizer');
+        const sidebar = document.getElementById('sidebar');
+
+        resizer.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+            document.addEventListener('mousemove', handleMouseMove);
+            document.addEventListener('mouseup', () => {
+                document.removeEventListener('mousemove', handleMouseMove);
+            });
+        });
+
+        function handleMouseMove(e) {
+            const newWidth = e.clientX;
+            if (newWidth > 100 && newWidth < 500) { // Min and max width
+                sidebar.style.width = newWidth + 'px';
+            }
         }
     </script>
 </body>
