@@ -959,6 +959,16 @@
                         const words = fullSubCategory.split(/\s+/);
                         subCategory = words.slice(0, 2).join(' ');
                         buttonText = rawButtonText.substring(subCategoryMatch[0].length).trim();
+                        
+                        const nextPartMatch = buttonText.match(/^\(([^)]+)\)/);
+                        if (nextPartMatch) {
+                            const nextPart = nextPartMatch[1];
+                            const nextPartWords = nextPart.split(/\s+/);
+                            if (nextPartWords.length > 0) {
+                                subCategory += ' ' + nextPartWords[0];
+                                buttonText = buttonText.substring(nextPartMatch[0].length).trim();
+                            }
+                        }
                     }
 
                     if (section && subCategory && buttonText && !existingButtons.has(`${section}|${subCategory}|${buttonText}`)) {
