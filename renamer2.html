@@ -40,12 +40,15 @@
             flex-grow: 1;
             overflow-y: auto;
             height: 0;
+            text-align: left;
         }
-        .sidebar-section h4, .sidebar-subcategory h5 {
+        .sidebar-section h4, .sidebar-subcategory h5, #sidebar-scroll-container h4, #sidebar-scroll-container h5, #sidebar-scroll-container h6 {
             color: black;
             margin: 10px 0 5px 8px;
             cursor: pointer;
             user-select: none;
+            padding: 2px 4px;
+            text-align: left;
         }
         .sidebar-subcategory h5 {
             margin-left: 16px;
@@ -119,13 +122,15 @@
             background-color: #1877f2;
         }
         .bottom-bar {
-            padding: 10px 20px 10px 0px;
+            padding: 10px;
             border-top: 1px solid #444444;
             display: flex;
             align-items: center;
             height: 36px; /* Match button height */
             box-sizing: border-box;
             background-color: #1877f2;
+            color: white;
+            justify-content: space-between;
         }
         .top-bar label {
             margin-right: 10px; /* Add padding between label and dropdown */
@@ -206,13 +211,39 @@
             display: none;
             z-index: 2147483647;
         }
-        .thumbnail.selected {
+        .landscape-row.selected-landscape {
+            outline: 3px solid blue;
+        }
+        .landscape-row.selected-landscape-rotate {
+            outline: 3px solid green;
+        }
+        .landscape-row.selected-delete {
+            outline: 3px dashed purple;
+        }
+        .landscape-row.selected-edit {
+            outline: 3px solid yellow;
+        }
+        .thumbnail-wrapper {
+            display: inline-block;
+            vertical-align: top;
+            text-align: center;
+        }
+        .thumbnail-name {
+            font-size: 12px;
+            color: black;
+            background-color: #EBEBEB;
+            padding: 2px;
+            word-wrap: break-word;
+            max-width: 256px; /* Match default thumbnail width */
+        }
+        .thumbnail-wrapper.selected .thumbnail {
             box-shadow: 0 0 0 3px #007bff, 0 4px 8px rgba(0,0,0,0.4);
         }
 
         #multi-select-btn.active {
-            background-color: #166fe5;
-            border: 1px solid #fff;
+            background-color: #d93025 !important;
+            color: #ffffff !important;
+            border: 1px solid #ffffff;
         }
 
         #video-overlay {
@@ -336,6 +367,29 @@
             cursor: not-allowed;
         }
 
+        #landscape-buttons button {
+            height: 36px;
+            padding: 0 8px;
+            border: 1px solid #444444;
+            background-color: #1877f2;
+            color: #ffffff;
+            border-radius: 0;
+            font-size: 14px;
+            box-sizing: border-box;
+            margin-right: 0;
+            white-space: nowrap;
+            cursor: pointer;
+        }
+
+        #landscape-buttons button:hover {
+            background-color: #166fe5;
+        }
+
+        #landscape-buttons button:not(:first-child) {
+            border-left: none;
+        }
+
+
         /* Style for layout name input */
         #layout-name-input {
             height: 36px;
@@ -392,6 +446,10 @@
             position: relative;
         }
 
+        .nested-dropdown:hover .nested-dropdown-content {
+            display: block;
+        }
+
         .nested-dropdown-content {
             display: none;
             position: absolute;
@@ -402,12 +460,10 @@
             box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
         }
 
-        .nested-dropdown-content.show {
-            display: block;
-        }
-
-        .sidebar-section button.selected-for-removal {
-            background-color: #ff4d4d !important;
+        .sidebar-section button.selected-for-removal,
+        #sidebar-scroll-container button.selected-for-removal {
+            background-color: #d93025 !important;
+            color: #ffffff !important;
             border: 1px solid #ffffff;
         }
 
@@ -439,6 +495,7 @@
             min-height: 24px;
             border: 1px solid #ddd;
             word-wrap: break-word;
+            white-space: pre-wrap; /* Allow line breaks */
         }
 
         .filename-part-row {
@@ -524,6 +581,18 @@
                         <a href="#" id="rename-canvas-btn">Rename Canvas</a>
                         <a href="#" id="scan-for-buttons-btn">Scan for Buttons</a>
                         <a href="#" id="remove-all-buttons-btn">Remove All Buttons</a>
+                        <a href="#" id="generate-edit-btn">Generate Edit Thumbnails</a>
+                        <div style="padding: 12px 16px; border-top: 1px solid #ddd;">
+                            <label for="num-elements-input" style="display: block; margin-bottom: 5px;">Number of Elements</label>
+                            <input type="number" id="num-elements-input" min="1" value="1" style="width: 100%; box-sizing: border-box; background-color: #ffffff; border: 1px solid #444; color: black; padding: 4px;">
+                        </div>
+                        <div style="padding: 12px 16px; border-top: 1px solid #ddd;">
+                             <a href="#" id="visible-buttons-btn">Visible Buttons</a>
+                        </div>
+                        <div style="padding: 12px 16px; border-top: 1px solid #ddd;">
+                            <label for="font-size-slider" style="display: block; margin-bottom: 5px;">Button Font Size</label>
+                            <input type="range" id="font-size-slider" min="8" max="24" value="14" style="width: 100%;">
+                        </div>
                         <div class="nested-dropdown">
                             <a href="#">Recent Directories</a>
                             <div class="nested-dropdown-content" id="recent-directories-list">
@@ -559,7 +628,7 @@
                 <input type="text" id="layout-name-input" placeholder="Layout Name">
                 <button id="save-layout-btn">Save Layout</button>
                 <select id="layout-select">
-                    <option value="" disabled hidden>Select Layout</option>
+                    <option value="" disabled hidden>Layout Select</option>
                 </select>
                 <button id="load-layout-btn">Load Layout</button>
                 <button id="delete-layout-btn">Delete Layout</button>
@@ -581,8 +650,17 @@
                 <div id="content-spacer" style="position: absolute; top: 0; left: 0; z-index: -1;"></div>
             </div>
             <div class="bottom-bar">
-            <button id="new-filename-btn" style="height: 36px; padding: 0 12px; border: 1px solid #444444; background-color: #1877f2; color: #ffffff; border-radius: 0; font-size: 14px; box-sizing: border-box; cursor: pointer; margin-right: 0;">New</button>
-                <button id="remove-btn" style="height: 36px; padding: 0 12px; border: 1px solid #444444; background-color: #1877f2; color: #ffffff; border-radius: 0; font-size: 14px; box-sizing: border-box; cursor: pointer;">Remove</button>
+                <div style="display: flex;">
+                    <button id="new-filename-btn" style="height: 36px; padding: 0 12px; border: 1px solid #444444; background-color: #1877f2; color: #ffffff; border-radius: 0; font-size: 14px; box-sizing: border-box; cursor: pointer;">New</button>
+                    <button id="remove-btn" style="height: 36px; padding: 0 12px; border: 1px solid #444444; border-left: none; background-color: #1877f2; color: #ffffff; border-radius: 0; font-size: 14px; box-sizing: border-box; cursor: pointer;">Remove</button>
+                </div>
+                <div id="bottom-bar-info" style="flex-grow: 1; text-align: right;"></div>
+                <div id="landscape-buttons" style="display: none;">
+                    <button id="landscape-btn">Landscape</button>
+                    <button id="landscape-rotate-btn">Landscape Rotate</button>
+                    <button id="delete-btn">Delete</button>
+                    <button id="edit-btn">Edit</button>
+                </div>
             </div>
         </div>
     </div>
@@ -591,7 +669,7 @@
         <div class="filename-builder-modal-content">
             <span class="close">&times;</span>
             <h2>Create New Filename Button</h2>
-            <p>Build a filename structure. The button will be created in the sidebar.</p>
+            <p>Define a category and add one or more elements to create a button.</p>
             
             <h4>Preview:</h4>
             <div id="filename-preview"></div>
@@ -600,11 +678,11 @@
                 <!-- Dynamic parts will be added here -->
             </div>
 
-            <datalist id="previous-sections-list"></datalist>
-            <datalist id="previous-values-list"></datalist>
+            <datalist id="previous-categories-list"></datalist>
+            <datalist id="previous-elements-list"></datalist>
 
             <div id="add-filename-part-controls">
-                <button id="add-part-btn">+</button>
+                <button id="add-element-btn">+</button>
             </div>
 
             <button id="create-filename-button-btn">Add Button</button>
@@ -631,6 +709,44 @@
                 <button>Download .bat File</button>
             </a>
             <button id="reload-page-btn" style="display: none;">Reload Page</button>
+        </div>
+    </div>
+    
+    <div id="visible-buttons-modal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>Visible Buttons</h2>
+            <p>Select which buttons to display in the sidebar.</p>
+            <div id="visible-buttons-list-container" style="max-height: 400px; overflow-y: auto;">
+                <!-- Button visibility controls will be dynamically added here -->
+            </div>
+        </div>
+    </div>
+
+    <div id="edit-script-modal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>Generate Edit Thumbnails</h2>
+            <p>This script will extract 10 screenshots from each video. You will need FFmpeg installed and in your system's PATH.</p>
+            <textarea id="edit-batch-script" rows="10" cols="80" readonly></textarea>
+            <button id="copy-edit-script-btn">Copy to Clipboard</button>
+            <a id="download-edit-script-link" download="generate_edit_thumbnails.bat">
+                <button>Download .bat File</button>
+            </a>
+            <button id="reload-edit-page-btn" style="display: none;">Reload Page</button>
+        </div>
+    </div>
+
+    <div id="final-landscape-script-modal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>Final Landscape/Rotate Batch Script</h2>
+            <p>This script will process your selections. Run it in your main video directory.</p>
+            <textarea id="final-landscape-batch-script" rows="10" cols="80" readonly></textarea>
+            <button id="copy-final-landscape-script-btn">Copy to Clipboard</button>
+            <a id="download-final-landscape-script-link" download="process_selections.bat">
+                <button>Download .bat File</button>
+            </a>
         </div>
     </div>
 
@@ -708,6 +824,11 @@
         const cogBtn = document.getElementById('cog-btn');
         const newFilenameBtn = document.getElementById('new-filename-btn');
         const removeBtn = document.getElementById('remove-btn');
+        const visibleButtonsBtn = document.getElementById('visible-buttons-btn');
+        const visibleButtonsModal = document.getElementById('visible-buttons-modal');
+        const visibleButtonsListContainer = document.getElementById('visible-buttons-list-container');
+        const generateEditBtn = document.getElementById('generate-edit-btn');
+        const editScriptModal = document.getElementById('edit-script-modal');
         
         let buttonsForRemoval = new Set();
         let filenameParts = [];
@@ -716,9 +837,15 @@
         const addPartBtn = document.getElementById('add-part-btn');
         const createFilenameButtonBtn = document.getElementById('create-filename-button-btn');
 
-        let canvases = new Map();
+        var canvases = new Map();
         let activeCanvasId = 1;
         let allThumbnails = [];
+        let currentDirHandle;
+        let landscapeSelectionMode = ''; // 'landscape' or 'landscape-rotate'
+        const landscapeSelections = new Set();
+        const landscapeRotateSelections = new Set();
+        const deleteSelections = new Set();
+        const editSelections = new Set();
 
         function updateRemoveButtonState() {
             if (buttonsForRemoval.size === 0) {
@@ -844,6 +971,28 @@
             await loadRecentDirectories();
             updateRemoveButtonState();
 
+            if (!directoryName) {
+                directoryName = 'default'; // For testing purposes
+            }
+
+            const numElementsInput = document.getElementById('num-elements-input');
+            numElementsInput.addEventListener('change', () => {
+                localStorage.setItem(`${directoryName}-numElements`, numElementsInput.value);
+                loadCustomButtons();
+            });
+
+            const fontSizeSlider = document.getElementById('font-size-slider');
+            fontSizeSlider.addEventListener('input', () => {
+                const buttons = document.querySelectorAll('#sidebar-scroll-container button');
+                buttons.forEach(button => {
+                    button.style.fontSize = `${fontSizeSlider.value}px`;
+                    adjustButtonFontSize(button);
+                });
+            });
+            fontSizeSlider.addEventListener('change', () => {
+                localStorage.setItem(`${directoryName}-fontSize`, fontSizeSlider.value);
+            });
+
             try {
                 const dirHandle = await getDb('lastDirectory');
                 if (dirHandle) {
@@ -874,6 +1023,70 @@
             const dropdown = document.getElementById('cog-dropdown');
             dropdown.style.display = dropdown.style.display === 'block' ? 'none' : 'block';
         });
+
+        // Prevent clicks inside the dropdown from closing it
+        document.getElementById('cog-dropdown').addEventListener('click', (event) => {
+            event.stopPropagation();
+        });
+
+        generateEditBtn.addEventListener('click', () => {
+            if (allVideoFiles.length === 0) {
+                alert('No video files loaded. Please load a directory first.');
+                return;
+            }
+            generateEditBatchScript(allVideoFiles);
+            editScriptModal.style.display = 'block';
+        });
+
+        editScriptModal.querySelector('.close').addEventListener('click', () => {
+            editScriptModal.style.display = 'none';
+        });
+
+        document.getElementById('copy-edit-script-btn').addEventListener('click', () => {
+            const scriptTextArea = document.getElementById('edit-batch-script');
+            scriptTextArea.select();
+            navigator.clipboard.writeText(scriptTextArea.value).then(() => {
+                alert('Script copied to clipboard!');
+                document.getElementById('reload-edit-page-btn').style.display = 'inline-block';
+            });
+        });
+
+        document.getElementById('download-edit-script-link').addEventListener('click', () => {
+            document.getElementById('reload-edit-page-btn').style.display = 'inline-block';
+        });
+
+        document.getElementById('reload-edit-page-btn').addEventListener('click', () => {
+            location.reload();
+        });
+
+        document.getElementById('landscape-btn').addEventListener('click', () => {
+            landscapeSelectionMode = 'landscape';
+            document.getElementById('landscape-btn').style.backgroundColor = 'blue';
+            document.getElementById('landscape-rotate-btn').style.backgroundColor = '';
+        });
+
+        document.getElementById('landscape-rotate-btn').addEventListener('click', () => {
+            landscapeSelectionMode = 'landscape-rotate';
+            updateSelectionModeButtons();
+        });
+
+        document.getElementById('delete-btn').addEventListener('click', () => {
+            landscapeSelectionMode = 'delete';
+            updateSelectionModeButtons();
+        });
+
+        document.getElementById('edit-btn').addEventListener('click', () => {
+            landscapeSelectionMode = 'edit';
+            updateSelectionModeButtons();
+        });
+
+        function updateSelectionModeButtons() {
+            document.getElementById('landscape-btn').style.backgroundColor = landscapeSelectionMode === 'landscape' ? 'blue' : '';
+            document.getElementById('landscape-rotate-btn').style.backgroundColor = landscapeSelectionMode === 'landscape-rotate' ? 'green' : '';
+            document.getElementById('delete-btn').style.backgroundColor = landscapeSelectionMode === 'delete' ? 'purple' : '';
+            document.getElementById('edit-btn').style.backgroundColor = landscapeSelectionMode === 'edit' ? 'yellow' : '';
+        }
+
 
         const projectUsernameInput = document.getElementById('project-username-input');
         projectUsernameInput.addEventListener('change', () => {
@@ -922,99 +1135,117 @@
             document.getElementById('cog-dropdown').style.display = 'none';
         });
 
+        function insertButtonIntoTree(tree, path, buttonData) {
+            let currentLevel = tree;
+            let node = null;
+
+            for (let i = 0; i < path.length; i++) {
+                const name = path[i];
+                const isButton = i === path.length - 1;
+
+                node = currentLevel.find(item => item.name === name && item.type === (isButton ? 'button' : 'category'));
+
+                if (!node) {
+                    node = {
+                        name: name,
+                        type: isButton ? 'button' : 'category',
+                    };
+                    if (isButton) {
+                        Object.assign(node, { id: buttonData.id || Date.now() + Math.random(), ...buttonData });
+                    } else {
+                        node.children = [];
+                    }
+                    currentLevel.push(node);
+                } else if (isButton) {
+                    // If a button with the same path already exists, it's a duplicate.
+                    return false; 
+                }
+                
+                if (!isButton) {
+                    currentLevel = node.children;
+                }
+            }
+            return true; // Indicates a new button was successfully added
+        }
+
         scanForButtonsBtn.addEventListener('click', async () => {
             let username = projectUsernameInput.value.trim();
             if (!username) {
                 username = prompt('Please enter a Project Username to scan for matching filenames:');
                 if (username) {
                     projectUsernameInput.value = username;
-                    projectUsernameInput.dispatchEvent(new Event('change')); // Save it
+                    projectUsernameInput.dispatchEvent(new Event('change'));
                 } else {
                     alert('Scan cancelled. A Project Username is required.');
                     return;
                 }
             }
 
-            const savedButtons = JSON.parse(localStorage.getItem(`${directoryName}-customButtons`) || '[]');
-            const existingButtons = new Set(savedButtons.map(b => `${b.section}|${b.subCategory}|${b.buttonText}`));
+            let customButtonTree = JSON.parse(localStorage.getItem(`${directoryName}-customButtons`) || '[]');
             let newButtonsCreated = 0;
 
-            const regex = new RegExp(`^\\[${username}\\]_(\\w+)\\s*(.*)`);
+            // Regex explained:
+            // ^\\[${username}\\]_  - Matches "[username]_" at the start of the string.
+            // ([^(]+)             - Captures the Category. Matches any character except '('. This is more flexible than \w+.
+            // (.*)                 - Captures the rest of the string, which contains the elements.
+            const regex = new RegExp(`^\\[${username}\\]_([^(]+)(.*)`);
 
-            allVideoFiles.forEach(file => {
+            for (const file of allVideoFiles) {
                 const match = file.name.match(regex);
-                if (match) {
-                    const section = match[1];
-                    let rawButtonText = match[2] || '';
-                    
-                    rawButtonText = rawButtonText.substring(0, rawButtonText.lastIndexOf('.')).trim();
-                    rawButtonText = rawButtonText.replace(/\s*\(\d+\)$/, '').trim();
+                if (!match) continue;
 
-                    const subCategoryMatch = rawButtonText.match(/^\(([^)]+)\)/);
-                    let subCategory = '';
-                    let buttonText = rawButtonText;
+                const category = match[1].trim();
+                let rawElementsText = match[2] || '';
+                
+                // Clean up raw elements string: remove file extension and trailing number like (1)
+                rawElementsText = rawElementsText.substring(0, rawElementsText.lastIndexOf('.')).trim();
+                rawElementsText = rawElementsText.replace(/\s*\(\d+\)$/, '').trim();
 
-                    if (subCategoryMatch) {
-                        const fullSubCategory = subCategoryMatch[1];
-                        const words = fullSubCategory.split(/\s+/);
-                        subCategory = words.slice(0, 2).join(' ');
-                        buttonText = rawButtonText.substring(subCategoryMatch[0].length).trim();
-                        
-                        const nextPartMatch = buttonText.match(/^\(([^)]+)\)/);
-                        if (nextPartMatch) {
-                            const nextPart = nextPartMatch[1];
-                            const nextPartWords = nextPart.split(/\s+/);
-                            if (nextPartWords.length > 0) {
-                                subCategory += ' ' + nextPartWords[0];
-                                buttonText = buttonText.substring(nextPartMatch[0].length).trim();
-                            }
-                        }
+                // Extract all parenthesized elements, e.g., "(Coat)" "(Black 1)"
+                const elementsWithParens = rawElementsText.match(/\(([^)]+)\)/g) || [];
+                
+                if (elementsWithParens.length === 0) {
+                    // This handles filenames like "[user]_Misc.mp4" or "[user]_Misc (1).mp4"
+                    // A special "+1" button is created for simple renaming.
+                    const path = [category, '+1'];
+                    const buttonData = {
+                        fullButtonText: '',
+                        specialType: 'plusOne'
+                    };
+                    if (insertButtonIntoTree(customButtonTree, path, buttonData)) {
+                        newButtonsCreated++;
                     }
-
-                    if (section && subCategory && buttonText && !existingButtons.has(`${section}|${subCategory}|${buttonText}`)) {
-                        const newButtonData = {
-                            id: Date.now() + Math.random(),
-                            section: section,
-                            subCategory: subCategory,
-                            buttonText: buttonText
-                        };
-                        savedButtons.push(newButtonData);
-                        existingButtons.add(`${section}|${subCategory}|${buttonText}`);
+                } else {
+                    // This handles hierarchical names like "[user]_Misc (Coat) (Black 1).mp4"
+                    // 1. Remove parentheses to get clean element names: ["Coat", "Black 1"]
+                    const cleanElements = elementsWithParens.map(p => p.slice(1, -1));
+                    
+                    // 2. The full path for the tree structure: ["Misc", "Coat", "Black 1"]
+                    const path = [category, ...cleanElements];
+                    
+                    // 3. Store the original text with parentheses for other features like highlighting
+                    const buttonData = {
+                        fullButtonText: elementsWithParens.join(' ')
+                    };
+                    
+                    // 4. Insert into the tree, checking for duplicates.
+                    if (insertButtonIntoTree(customButtonTree, path, buttonData)) {
                         newButtonsCreated++;
                     }
                 }
-            });
+            }
 
             if (newButtonsCreated > 0) {
-                localStorage.setItem(`${directoryName}-customButtons`, JSON.stringify(savedButtons));
+                localStorage.setItem(`${directoryName}-customButtons`, JSON.stringify(customButtonTree));
                 await loadCustomButtons();
                 alert(`${newButtonsCreated} new button(s) created successfully!`);
             } else {
-                alert('No new buttons were found based on the filenames and the current Project Username.');
+                alert('No new buttons were found. They may already exist or not match the current Project Username.');
             }
             
             document.getElementById('cog-dropdown').style.display = 'none';
         });
 
-        const nestedDropdown = document.querySelector('.nested-dropdown');
-        const recentDirectoriesList = document.getElementById('recent-directories-list');
-        let leaveTimeout;
-
-        const showRecentDirs = () => {
-            clearTimeout(leaveTimeout);
-            recentDirectoriesList.classList.add('show');
-        };
-
-        const hideRecentDirs = () => {
-            leaveTimeout = setTimeout(() => {
-                recentDirectoriesList.classList.remove('show');
-            }, 500);
-        };
-
-        nestedDropdown.addEventListener('mouseenter', showRecentDirs);
-        nestedDropdown.addEventListener('mouseleave', hideRecentDirs);
-        recentDirectoriesList.addEventListener('mouseenter', showRecentDirs);
-        recentDirectoriesList.addEventListener('mouseleave', hideRecentDirs);
 
         sortSelector.addEventListener('change', (e) => {
             const value = e.target.value;
@@ -1176,7 +1407,12 @@
         sizeSelector.addEventListener('change', (event) => {
             const newSize = event.target.value;
             localStorage.setItem('thumbnailSize', newSize);
-            applyThumbnailSize();
+            const editModeBtn = document.getElementById('edit-mode-btn');
+            if (editModeBtn && editModeBtn.textContent.includes('Off')) {
+                layoutLandscapeThumbnails();
+            } else {
+                applyThumbnailSize();
+            }
         });
 
         function applyThumbnailSize() {
@@ -1192,6 +1428,7 @@
         }
 
         async function processDirectory(dirHandle) {
+            currentDirHandle = dirHandle;
             await setDb('lastDirectory', dirHandle);
             
             let recentDirs = await getDb('recentDirectories') || [];
@@ -1208,7 +1445,78 @@
 
             directoryName = dirHandle.name;
             projectUsernameInput.value = localStorage.getItem(`${directoryName}-projectUsername`) || '';
+
+            const savedNumElements = localStorage.getItem(`${directoryName}-numElements`);
+            document.getElementById('num-elements-input').value = savedNumElements || 1;
+            
+            const savedFontSize = localStorage.getItem(`${directoryName}-fontSize`);
+            document.getElementById('font-size-slider').value = savedFontSize || 14;
+
             loadCustomButtons();
+
+            let hasEditThumbnails = false;
+            let hasLandscapeVideos = false;
+            let hasLandscapeRotateVideos = false;
+            let hasEditVideos = false;
+
+            try {
+                await dirHandle.getDirectoryHandle('Edit Thumbnails');
+                hasEditThumbnails = true;
+            } catch (e) { /* Folder doesn't exist, which is fine. */ }
+
+            try {
+                await dirHandle.getDirectoryHandle('Landscape');
+                hasLandscapeVideos = true;
+            } catch (e) { /* Folder doesn't exist, which is fine. */ }
+            
+            try {
+                await dirHandle.getDirectoryHandle('Landscape Rotate');
+                hasLandscapeRotateVideos = true;
+            } catch (e) { /* Folder doesn't exist, which is fine. */ }
+            
+            try {
+                await dirHandle.getDirectoryHandle('Edit');
+                hasEditVideos = true;
+            } catch (e) { /* Folder doesn't exist, which is fine. */ }
+
+
+            if (hasEditThumbnails) {
+                const editModeBtn = document.createElement('a');
+                editModeBtn.href = '#';
+                editModeBtn.textContent = 'Edit Mode: On';
+                editModeBtn.id = 'edit-mode-btn';
+                document.getElementById('cog-dropdown').appendChild(editModeBtn);
+
+                const generateBatBtn = document.createElement('a');
+                generateBatBtn.href = '#';
+                generateBatBtn.textContent = 'Generate Edit Bat';
+                generateBatBtn.id = 'generate-edit-bat-btn';
+                generateBatBtn.style.display = 'none';
+                document.getElementById('cog-dropdown').appendChild(generateBatBtn);
+
+                editModeBtn.addEventListener('click', () => {
+                    // The button now reflects the action, so "On" means the user wants to turn it on.
+                    if (editModeBtn.textContent.includes('On')) {
+                        renderEditMode();
+                        document.getElementById('landscape-buttons').style.display = 'flex';
+                        generateBatBtn.style.display = 'block';
+                        editModeBtn.textContent = 'Edit Mode: Off'; // Now it's on, so the button offers to turn it off.
+                    } else {
+                        // Turn the mode off
+                        document.getElementById('landscape-buttons').style.display = 'none';
+                        generateBatBtn.style.display = 'none';
+                        editModeBtn.textContent = 'Edit Mode: On'; // Now it's off, so the button offers to turn it on.
+                        // Reload the original thumbnail layout
+                        renderCanvas(activeCanvasId);
+                    }
+                });
+
+                generateBatBtn.addEventListener('click', () => {
+                    generateFinalBatchScript();
+                    document.getElementById('final-landscape-script-modal').style.display = 'block';
+                });
+            }
+
             isLayoutFrozen = false;
             selectedThumbnails.clear();
             updatePlayButtonState();
@@ -1236,22 +1544,22 @@
                 // scan directory doesn't exist, which is fine.
             }
 
+            for await (const entry of dirHandle.values()) {
+                if (entry.kind === 'file' && entry.name.match(/\.(mp4|avi|mov|mkv)$/i)) {
+                    allVideoFiles.push(await entry.getFile());
+                }
+            }
+
             try {
                 const thumbnailsDirHandle = await dirHandle.getDirectoryHandle('Thumbnails');
-                hasThumbnailsSubdir = true;
                 for await (const entry of thumbnailsDirHandle.values()) {
                     if (entry.kind === 'file' && entry.name.match(/\.(jpe?g|png|gif|webp)$/i)) {
                         thumbnailFiles.push(await entry.getFile());
                     }
                 }
+                hasThumbnailsSubdir = true;
             } catch (e) {
-                // Thumbnails directory doesn't exist, which is fine.
-            }
-
-            for await (const entry of dirHandle.values()) {
-                if (entry.kind === 'file' && entry.name.match(/\.(mp4|avi|mov|mkv)$/i)) {
-                    allVideoFiles.push(await entry.getFile());
-                }
+                hasThumbnailsSubdir = false;
             }
             
             if (hasThumbnailsSubdir) {
@@ -1275,7 +1583,7 @@
                     });
                 });
 
-                Promise.all(imageLoadPromises).then(loadedImages => {
+                Promise.all(imageLoadPromises).then(async loadedImages => {
                     allThumbnails = loadedImages;
 
                     if (savedCanvasData) {
@@ -1311,30 +1619,121 @@
                         canvases.set(renamedCanvasId, { id: renamedCanvasId, name: 'Renamed', thumbnails: [] });
                     }
 
-                    allThumbnails.forEach(img => {
-                        makeDraggable(img);
-                        img.addEventListener('click', (e) => {
-                            if (isMultiSelectMode) {
-                                if (selectedThumbnails.has(img)) {
-                                    img.classList.remove('selected');
-                                    selectedThumbnails.delete(img);
-                                } else {
-                                    img.classList.add('selected');
-                                    selectedThumbnails.add(img);
+                    // --- Auto-organize processed thumbnails ---
+                    if (hasLandscapeVideos || hasLandscapeRotateVideos) {
+                        const organizeProcessedThumbnails = async () => {
+                            const getOrCreateCanvas = (name) => {
+                                let canvas = Array.from(canvases.values()).find(c => c.name === name);
+                                if (!canvas) {
+                                    const newId = getNextCanvasId();
+                                    canvas = { id: newId, name: name, thumbnails: [] };
+                                    canvases.set(newId, canvas);
                                 }
-                            } else if (e.ctrlKey || e.metaKey) {
-                                if (selectedThumbnails.has(img)) {
-                                    img.classList.remove('selected');
-                                    selectedThumbnails.delete(img);
+                                return canvas;
+                            };
+
+                            const moveThumbnailsToCanvas = async (dirName, targetCanvas) => {
+                                try {
+                                    const dirHandle = await currentDirHandle.getDirectoryHandle(dirName);
+                                    const processedFiles = new Set();
+                                    for await (const entry of dirHandle.values()) {
+                                        if (entry.kind === 'file') {
+                                            processedFiles.add(entry.name.substring(0, entry.name.lastIndexOf('.')));
+                                        }
+                                    }
+
+                                    for (const sourceCanvas of canvases.values()) {
+                                        if (sourceCanvas.id === targetCanvas.id) continue;
+
+                                        const thumbnailsToMove = [];
+                                        sourceCanvas.thumbnails = sourceCanvas.thumbnails.filter(thumb => {
+                                            const baseName = thumb.dataset.fileName.substring(0, thumb.dataset.fileName.lastIndexOf('.'));
+                                            if (processedFiles.has(baseName)) {
+                                                if (!targetCanvas.thumbnails.some(t => t.dataset.fileName === thumb.dataset.fileName)) {
+                                                    thumbnailsToMove.push(thumb);
+                                                }
+                                                return false; // Remove from source
+                                            }
+                                            return true; // Keep in source
+                                        });
+
+                                        if (thumbnailsToMove.length > 0) {
+                                            targetCanvas.thumbnails.push(...thumbnailsToMove);
+                                        }
+                                    }
+                                } catch (e) {
+                                    console.warn(`Could not process directory ${dirName}:`, e);
+                                }
+                            };
+
+                            if (hasLandscapeVideos) {
+                                const landscapeCanvas = getOrCreateCanvas('Landscape');
+                                await moveThumbnailsToCanvas('Landscape', landscapeCanvas);
+                            }
+
+                            if (hasLandscapeRotateVideos) {
+                                const landscapeRotateCanvas = getOrCreateCanvas('Landscape Rotate');
+                                await moveThumbnailsToCanvas('Landscape Rotate', landscapeRotateCanvas);
+                            }
+                            
+                            if (hasEditVideos) {
+                                const editCanvas = getOrCreateCanvas('Edit');
+                                await moveThumbnailsToCanvas('Edit', editCanvas);
+                            }
+                        };
+
+                        await organizeProcessedThumbnails();
+                    }
+
+                    allThumbnails.forEach(img => {
+                        // Create a wrapper for the image and its name
+                        const wrapper = document.createElement('div');
+                        wrapper.classList.add('thumbnail-wrapper');
+                        wrapper.appendChild(img);
+
+                        const nameDiv = document.createElement('div');
+                        nameDiv.classList.add('thumbnail-name');
+                        nameDiv.textContent = img.dataset.fileName;
+                        nameDiv.dataset.originalFilename = img.dataset.fileName;
+                        wrapper.appendChild(nameDiv);
+
+                        // Replace the img with the wrapper in the canvases map
+                        for (const canvas of canvases.values()) {
+                            const index = canvas.thumbnails.indexOf(img);
+                            if (index > -1) {
+                                canvas.thumbnails[index] = wrapper;
+                                break;
+                            }
+                        }
+
+                        makeDraggable(wrapper);
+                        
+                        nameDiv.addEventListener('dblclick', () => {
+                            nameDiv.contentEditable = true;
+                            nameDiv.focus();
+                        });
+
+                        nameDiv.addEventListener('blur', () => {
+                            nameDiv.contentEditable = false;
+                            // Update the image's data attribute with the new name
+                            img.dataset.fileName = nameDiv.textContent;
+                        });
+
+
+                        wrapper.addEventListener('click', (e) => {
+                            if (isMultiSelectMode || e.ctrlKey || e.metaKey) {
+                                if (selectedThumbnails.has(wrapper)) {
+                                    wrapper.classList.remove('selected');
+                                    selectedThumbnails.delete(wrapper);
                                 } else {
-                                    img.classList.add('selected');
-                                    selectedThumbnails.add(img);
+                                    wrapper.classList.add('selected');
+                                    selectedThumbnails.add(wrapper);
                                 }
                             } else {
-                                document.querySelectorAll('.thumbnail').forEach(t => t.classList.remove('selected'));
+                                selectedThumbnails.forEach(t => t.classList.remove('selected'));
                                 selectedThumbnails.clear();
-                                img.classList.add('selected');
-                                selectedThumbnails.add(img);
+                                wrapper.classList.add('selected');
+                                selectedThumbnails.add(wrapper);
                             }
                             updatePlayButtonState();
                         });
@@ -1396,8 +1795,286 @@
             await setDb('recentDirectories', recentDirs);
             await loadRecentDirectories();
         }
+
+        async function renderEditMode() {
+            thumbnailContainer.innerHTML = ''; // Clear container
+            const editDirHandle = await currentDirHandle.getDirectoryHandle('Edit Thumbnails');
+            let landscapeFiles = [];
+            for await (const entry of editDirHandle.values()) {
+                if (entry.kind === 'file' && entry.name.match(/\.(jpe?g|png|gif|webp)$/i)) {
+                    landscapeFiles.push(await entry.getFile());
+                }
+            }
+
+            const groupedFiles = landscapeFiles.reduce((acc, file) => {
+                const videoName = file.name.substring(0, file.name.lastIndexOf('_'));
+                if (!acc[videoName]) {
+                    acc[videoName] = [];
+                }
+                acc[videoName].push(file);
+                return acc;
+            }, {});
+
+            const videoNames = Object.keys(groupedFiles).sort();
+            const allPromises = [];
+
+            for (const videoName of videoNames) {
+                const files = groupedFiles[videoName];
+                files.sort((a, b) => {
+                    const aNum = parseInt(a.name.substring(a.name.lastIndexOf('_') + 1));
+                    const bNum = parseInt(b.name.substring(b.name.lastIndexOf('_') + 1));
+                    return aNum - bNum;
+                });
+
+                const rowDiv = document.createElement('div');
+                rowDiv.classList.add('landscape-row');
+                rowDiv.dataset.videoName = videoName;
+                thumbnailContainer.appendChild(rowDiv);
+
+                rowDiv.addEventListener('click', () => {
+                    const selections = {
+                        'landscape': landscapeSelections,
+                        'landscape-rotate': landscapeRotateSelections,
+                        'delete': deleteSelections,
+                        'edit': editSelections
+                    };
+
+                    if (!landscapeSelectionMode) {
+                        alert('Please select a mode from the bottom bar first.');
+                        return;
+                    }
+
+                    // Toggle selection for the current mode
+                    if (selections[landscapeSelectionMode].has(videoName)) {
+                        selections[landscapeSelectionMode].delete(videoName);
+                    } else {
+                        selections[landscapeSelectionMode].add(videoName);
+                        // Ensure mutual exclusivity
+                        for (const mode in selections) {
+                            if (mode !== landscapeSelectionMode) {
+                                selections[mode].delete(videoName);
+                            }
+                        }
+                    }
+
+                    // Update UI classes
+                    rowDiv.classList.toggle('selected-landscape', landscapeSelections.has(videoName));
+                    rowDiv.classList.toggle('selected-landscape-rotate', landscapeRotateSelections.has(videoName));
+                    rowDiv.classList.toggle('selected-delete', deleteSelections.has(videoName));
+                    rowDiv.classList.toggle('selected-edit', editSelections.has(videoName));
+                });
+
+                 // Re-apply selection classes on initial render
+                if (landscapeSelections.has(videoName)) rowDiv.classList.add('selected-landscape');
+                if (landscapeRotateSelections.has(videoName)) rowDiv.classList.add('selected-landscape-rotate');
+                if (deleteSelections.has(videoName)) rowDiv.classList.add('selected-delete');
+                if (editSelections.has(videoName)) rowDiv.classList.add('selected-edit');
+
+                const imageLoadPromises = files.map(file => {
+                    return new Promise((resolve, reject) => {
+                        const img = new Image();
+                        img.onload = () => {
+                            img.classList.add('thumbnail');
+                            img.dataset.fileName = file.name;
+                            img.dataset.originalWidth = img.width;
+                            img.dataset.originalHeight = img.height;
+                            rowDiv.appendChild(img);
+                            resolve(img);
+                        };
+                        img.onerror = reject;
+                        img.src = URL.createObjectURL(file);
+                    });
+                });
+                allPromises.push(Promise.all(imageLoadPromises));
+            }
+
+            await Promise.all(allPromises);
+            layoutLandscapeThumbnails(); // Position and size after all images are loaded
+        }
+
+        function layoutLandscapeThumbnails() {
+            const scale = parseFloat(sizeSelector.value);
+            let yOffset = 20;
+            const rows = document.querySelectorAll('.landscape-row');
+
+            rows.forEach(row => {
+                row.style.position = 'absolute';
+                row.style.top = yOffset + 'px';
+                let xOffset = 20;
+                let maxRowHeight = 0;
+                let totalRowWidth = 0;
+                const thumbnails = row.querySelectorAll('.thumbnail');
+                
+                thumbnails.forEach((thumb, index) => {
+                    const originalWidth = parseFloat(thumb.dataset.originalWidth);
+                    const originalHeight = parseFloat(thumb.dataset.originalHeight);
+                    
+                    const scaledWidth = originalWidth * scale;
+                    const scaledHeight = originalHeight * scale;
+
+                    thumb.style.position = 'absolute';
+                    thumb.style.width = scaledWidth + 'px';
+                    thumb.style.height = scaledHeight + 'px';
+                    thumb.style.left = xOffset + 'px';
+                    thumb.style.top = '0px'; // Position relative to the row
+
+                    xOffset += scaledWidth + 20;
+                    if (scaledHeight > maxRowHeight) {
+                        maxRowHeight = scaledHeight;
+                    }
+                });
+
+                if (thumbnails.length > 0) {
+                    totalRowWidth = xOffset;
+                    row.style.width = totalRowWidth + 'px';
+                    row.style.height = maxRowHeight + 'px';
+                    yOffset += maxRowHeight + 20;
+                }
+            });
+             updateContentSpacer();
+        }
+
+        function generateEditBatchScript(videoFiles) {
+            const scriptLines = [
+                '@echo off',
+                'setlocal enabledelayedexpansion',
+                'cd /d "%~dp0"',
+                'echo Creating Edit Thumbnails directory...',
+                'if not exist "Edit Thumbnails" mkdir "Edit Thumbnails"',
+                'echo Generating edit thumbnails...',
+                ...videoFiles.flatMap(file => {
+                    const fileName = file.name;
+                    const baseName = fileName.substring(0, fileName.lastIndexOf('.'));
+                    return [
+                        '',
+                        `echo Processing "${fileName}"...`,
+                        `for /f "delims=" %%a in ('ffprobe -v error -show_entries format^=duration -of default^=noprint_wrappers^=1:nokey^=1 "${fileName}"') do (`,
+                        '    set "duration_str=%%a"',
+                        ')',
+                        'for /f "delims=." %%a in ("!duration_str!") do set "duration_int=%%a"',
+                        'if !duration_int! equ 0 set "duration_int=10"', // Avoid division by zero for very short videos
+                        'set /a "interval = !duration_int! / 10"',
+                        'if !interval! equ 0 set "interval=1"', // Ensure at least 1s interval for very short videos
+                        'for /l %%i in (1, 1, 10) do (',
+                        '    set /a "timestamp = (%%i - 1) * !interval!"',
+                        `    echo   - Generating thumbnail %%i for "${fileName}" at !timestamp!s...`,
+                        `    ffmpeg -ss !timestamp! -i "${fileName}" -vframes 1 -y "Edit Thumbnails\\${baseName}_%%i.jpg"`,
+                        ')'
+                    ];
+                }),
+                'echo.',
+                'echo Thumbnail generation complete.',
+                'pause'
+            ];
+            const script = scriptLines.join('\r\n');
+            document.getElementById('edit-batch-script').value = script;
+            const blob = new Blob([script], { type: 'text/plain;charset=utf-8' });
+            document.getElementById('download-edit-script-link').href = URL.createObjectURL(blob);
+        }
+
+        function generateFinalBatchScript() {
+            const scriptLines = [
+                '@echo off',
+                'cd /d "%~dp0"',
+                'echo Creating output directories...',
+                'if not exist "Landscape" mkdir "Landscape"',
+                'if not exist "Landscape Rotate" mkdir "Landscape Rotate"',
+                'if not exist "Edit" mkdir "Edit"',
+                ''
+            ];
+
+            const processRenaming = (videoName) => {
+                const wrapper = Array.from(document.querySelectorAll('.thumbnail-wrapper')).find(w => {
+                    const nameDiv = w.querySelector('.thumbnail-name');
+                    return nameDiv && nameDiv.dataset.originalFilename.startsWith(videoName);
+                });
+
+                if (wrapper) {
+                    const nameDiv = wrapper.querySelector('.thumbnail-name');
+                    const img = wrapper.querySelector('.thumbnail');
+                    const originalFilename = nameDiv.dataset.originalFilename;
+                    const currentFilename = img.dataset.fileName;
+
+                    if (originalFilename !== currentFilename) {
+                        const originalVideo = allVideoFiles.find(f => f.name === originalFilename.replace(/\.jpg$/, '.mp4'));
+                        if (originalVideo) {
+                             const newVideoName = currentFilename.replace(/\.jpg$/, '.mp4');
+                             scriptLines.push(`ren "${originalVideo.name}" "${newVideoName}"`);
+                             return newVideoName; // Return the new name for subsequent commands
+                        }
+                    }
+                }
+                const videoFile = allVideoFiles.find(f => f.name.startsWith(videoName));
+                return videoFile ? videoFile.name : null;
+            };
+
+            if (landscapeSelections.size > 0) {
+                scriptLines.push('echo Moving landscape files...');
+                landscapeSelections.forEach(videoName => {
+                    const finalVideoName = processRenaming(videoName);
+                    if (finalVideoName) {
+                        scriptLines.push(`move /Y "${finalVideoName}" "Landscape\\"`);
+                    }
+                });
+                scriptLines.push('');
+            }
+
+            if (landscapeRotateSelections.size > 0) {
+                scriptLines.push('echo Processing landscape rotate files...');
+                landscapeRotateSelections.forEach(videoName => {
+                    const finalVideoName = processRenaming(videoName);
+                    if (finalVideoName) {
+                        scriptLines.push(`ffmpeg -i "${finalVideoName}" -vf "transpose=1" "Landscape Rotate\\${finalVideoName}"`);
+                        scriptLines.push(`del "${finalVideoName}"`);
+                    }
+                });
+                scriptLines.push('');
+            }
+
+            if (deleteSelections.size > 0) {
+                scriptLines.push('echo Deleting selected files...');
+                deleteSelections.forEach(videoName => {
+                    const finalVideoName = processRenaming(videoName);
+                     if (finalVideoName) {
+                        scriptLines.push(`del "${finalVideoName}"`);
+                    }
+                });
+                scriptLines.push('');
+            }
+
+            if (editSelections.size > 0) {
+                scriptLines.push('echo Moving files to Edit folder...');
+                editSelections.forEach(videoName => {
+                    const finalVideoName = processRenaming(videoName);
+                    if (finalVideoName) {
+                        scriptLines.push(`move /Y "${finalVideoName}" "Edit\\"`);
+                    }
+                });
+                scriptLines.push('');
+            }
+            
+            scriptLines.push('echo.');
+            scriptLines.push('echo Processing complete.');
+            scriptLines.push('pause');
+
+            const script = scriptLines.join('\r\n');
+            document.getElementById('final-landscape-batch-script').value = script;
+            const blob = new Blob([script], { type: 'text/plain;charset=utf-8' });
+            document.getElementById('download-final-landscape-script-link').href = URL.createObjectURL(blob);
+        }
         
         window.onload = init;
+
+        document.getElementById('final-landscape-script-modal').querySelector('.close').addEventListener('click', () => {
+            document.getElementById('final-landscape-script-modal').style.display = 'none';
+        });
+        document.getElementById('copy-final-landscape-script-btn').addEventListener('click', () => {
+            const scriptTextArea = document.getElementById('final-landscape-batch-script');
+            scriptTextArea.select();
+            navigator.clipboard.writeText(scriptTextArea.value).then(() => {
+                alert('Script copied to clipboard!');
+            });
+        });
 
         function generateBatchScript(videoFiles, dirName) {
             const scriptLines = [
@@ -1443,11 +2120,12 @@
         
         function initializeFilenameBuilder() {
             filenamePartsContainer.innerHTML = '';
-            filenameParts = [{ type: 'section', value: '' }];
+            // Start with a category and one element
+            filenameParts = [{ type: 'category', value: '' }, { type: 'element', value: '' }];
             renderFilenameParts();
             updateFilenamePreview();
-            populatePreviousValues();
-            populatePreviousSections();
+            populatePreviousElements();
+            populatePreviousCategories();
         }
 
         function renderFilenameParts() {
@@ -1460,12 +2138,12 @@
                 input.type = 'text';
                 input.value = part.value;
 
-                if (part.type === 'section') {
-                    input.placeholder = 'Section';
-                    input.setAttribute('list', 'previous-sections-list');
+                if (part.type === 'category') {
+                    input.placeholder = 'Category';
+                    input.setAttribute('list', 'previous-categories-list');
                 } else {
-                    input.placeholder = 'Subheading / Title';
-                    input.setAttribute('list', 'previous-values-list');
+                    input.placeholder = `Element ${index}`;
+                    input.setAttribute('list', 'previous-elements-list');
                 }
 
                 input.addEventListener('input', () => {
@@ -1475,7 +2153,7 @@
 
                 row.appendChild(input);
 
-                if (index > 0) { // Can't remove the 'Section'
+                if (index > 0) { // Can't remove the 'Category'
                     const removeBtn = document.createElement('button');
                     removeBtn.textContent = '-';
                     removeBtn.onclick = () => removeFilenamePart(index);
@@ -1487,35 +2165,48 @@
 
         function updateFilenamePreview() {
             const username = projectUsernameInput.value || 'username';
-            const section = filenameParts[0]?.value || '';
-            const otherParts = filenameParts.slice(1)
-                .map(p => p.value.trim())
-                .filter(p => p) // Filter out empty strings
-                .map(p => `(${p})`)
-                .join(' ');
+            const category = filenameParts[0]?.value.trim() || 'Category';
             
-            filenamePreview.textContent = `[${username}]_${section}${section && otherParts ? ' ' : ''}${otherParts}`;
+            const elements = filenameParts.slice(1)
+                .map(p => p.value.trim())
+                .filter(p => p);
+
+            // Build a representative filename string for the preview
+            const elementsString = elements.map(e => `(${e})`).join(' ');
+            filenamePreview.textContent = `[${username}]_${category} ${elementsString} (1).mp4`;
+
+            // Also show the final button text and structure
+            if (elements.length > 0) {
+                const buttonName = elements[elements.length - 1];
+                let structure = category;
+                if (elements.length > 1) {
+                    structure += ` -> ${elements.slice(0, -1).join(' -> ')}`;
+                }
+                filenamePreview.textContent += `\nButton: "${buttonName}" under "${structure}"`;
+            }
         }
 
         function addFilenamePart(value = '') {
-            filenameParts.push({ type: 'part', value });
+            filenameParts.push({ type: 'element', value });
             renderFilenameParts();
             updateFilenamePreview();
         }
 
         function removeFilenamePart(index) {
-            filenameParts.splice(index, 1);
-            renderFilenameParts();
-            updateFilenamePreview();
+            if (filenameParts.length > 2) { // Always keep at least one category and one element
+                filenameParts.splice(index, 1);
+                renderFilenameParts();
+                updateFilenamePreview();
+            }
         }
 
-        function getPreviousValues() {
-            return JSON.parse(localStorage.getItem('previousFilenameValues') || '[]');
+        function getPreviousElements() {
+            return JSON.parse(localStorage.getItem('previousFilenameElements') || '[]');
         }
 
-        function populatePreviousValues() {
-            const values = getPreviousValues();
-            const datalist = document.getElementById('previous-values-list');
+        function populatePreviousElements() {
+            const values = getPreviousElements();
+            const datalist = document.getElementById('previous-elements-list');
             datalist.innerHTML = '';
             values.forEach(val => {
                 const option = document.createElement('option');
@@ -1524,189 +2215,290 @@
             });
         }
 
-        function getPreviousSections() {
-            return JSON.parse(localStorage.getItem('previousFilenameSections') || '[]');
+        function getPreviousCategories() {
+            return JSON.parse(localStorage.getItem('previousFilenameCategories') || '[]');
         }
 
-        function populatePreviousSections() {
-            const sections = getPreviousSections();
-            const datalist = document.getElementById('previous-sections-list');
+        function populatePreviousCategories() {
+            const categories = getPreviousCategories();
+            const datalist = document.getElementById('previous-categories-list');
             datalist.innerHTML = '';
-            sections.forEach(val => {
+            categories.forEach(val => {
                 const option = document.createElement('option');
                 option.value = val;
                 datalist.appendChild(option);
             });
         }
 
-        addPartBtn.addEventListener('click', () => addFilenamePart());
+        document.getElementById('add-element-btn').addEventListener('click', () => addFilenamePart());
 
         createFilenameButtonBtn.addEventListener('click', () => {
-            const section = filenameParts[0]?.value.trim();
-            if (!section) {
-                alert('The "Section" is required.');
+            const category = filenameParts[0]?.value.trim();
+            if (!category) {
+                alert('A "Category" is required to create a button.');
                 return;
             }
 
-            const parts = filenameParts.slice(1).map(p => p.value.trim()).filter(p => p);
-            if (parts.length < 1) {
-                alert('Please add at least one subheading or title.');
+            const elements = filenameParts.slice(1).map(p => p.value.trim()).filter(p => p);
+            if (elements.length === 0) {
+                alert('At least one "Element" is required to create a button.');
                 return;
             }
             
-            const fullSubCategory = parts[0];
-            const words = fullSubCategory.split(/\s+/);
-            const subCategory = words.slice(0, 2).join(' ');
-            
-            // Reconstruct buttonText based on what wasn't used in the subCategory
-            const remainingSubCategoryWords = words.slice(2);
-            const otherParts = parts.slice(1);
-            let buttonTextParts = [];
-            if (remainingSubCategoryWords.length > 0) {
-                buttonTextParts.push(remainingSubCategoryWords.join(' '));
-            }
-            buttonTextParts = buttonTextParts.concat(otherParts);
-            const buttonText = buttonTextParts.map(p => `(${p})`).join(' ');
-
-            // Save the new non-section values for future use
-            const previousValues = getPreviousValues();
-            buttonTextParts.forEach(p => {
-                const val = p.trim();
-                if (val && !previousValues.includes(val)) {
-                    previousValues.push(val);
-                }
+            // --- Save values to localStorage for future suggestions ---
+            const previousElements = getPreviousElements();
+            elements.forEach(el => {
+                if (el && !previousElements.includes(el)) previousElements.push(el);
             });
-            localStorage.setItem('previousFilenameValues', JSON.stringify(previousValues));
+            localStorage.setItem('previousFilenameElements', JSON.stringify(previousElements));
 
-            // --- Save section for future use ---
-            const previousSections = getPreviousSections();
-            if (section && !previousSections.includes(section)) {
-                previousSections.push(section);
-                localStorage.setItem('previousFilenameSections', JSON.stringify(previousSections));
+            const previousCategories = getPreviousCategories();
+            if (category && !previousCategories.includes(category)) {
+                previousCategories.push(category);
+                localStorage.setItem('previousFilenameCategories', JSON.stringify(previousCategories));
             }
-            
-            // --- Save button data for persistence ---
-            const savedButtons = JSON.parse(localStorage.getItem(`${directoryName}-customButtons`) || '[]');
-            const newButtonData = {
-                id: Date.now(),
-                section: section,
-                subCategory: subCategory,
-                buttonText: buttonText
-            };
-            savedButtons.push(newButtonData);
-            localStorage.setItem(`${directoryName}-customButtons`, JSON.stringify(savedButtons));
-            
-            loadCustomButtons();
 
-            filenameBuilderModal.style.display = 'none';
+            // --- Construct button data and save to the main tree ---
+            let customButtonTree = JSON.parse(localStorage.getItem(`${directoryName}-customButtons`) || '[]');
+            
+            const path = [category, ...elements];
+            const buttonData = {
+                fullButtonText: elements.map(p => `(${p})`).join(' ')
+            };
+
+            if (insertButtonIntoTree(customButtonTree, path, buttonData)) {
+                localStorage.setItem(`${directoryName}-customButtons`, JSON.stringify(customButtonTree));
+                loadCustomButtons();
+                filenameBuilderModal.style.display = 'none';
+                populatePreviousElements(); // Refresh datalists for next time
+                populatePreviousCategories();
+            } else {
+                alert('A button with this exact name and category structure already exists.');
+            }
         });
 
         async function loadCustomButtons() {
+            if (!directoryName) {
+                return;
+            }
             const scrollContainer = document.getElementById('sidebar-scroll-container');
             scrollContainer.innerHTML = '';
+            let customButtonTree = JSON.parse(localStorage.getItem(`${directoryName}-customButtons`) || '[]');
+            const collapseState = JSON.parse(localStorage.getItem(`${directoryName}-collapseState`) || '{}');
+            const numElements = parseInt(document.getElementById('num-elements-input').value, 10);
+            const buttonVisibility = JSON.parse(localStorage.getItem(`${directoryName}-buttonVisibility`) || '{}');
 
-            let savedButtons = JSON.parse(localStorage.getItem(`${directoryName}-customButtons`) || '[]');
-            
-            let needsUpdate = false;
-            savedButtons.forEach(button => {
-                if (button.subCategory === undefined) {
-                    needsUpdate = true;
-                    // Attempt to parse subCategory from old buttonText format
-                    const subCategoryMatch = button.buttonText.match(/^\s*\(([^)]+)\)/);
-                    if (subCategoryMatch) {
-                        const fullSubCategory = subCategoryMatch[1];
-                        const words = fullSubCategory.split(/\s+/);
-                        button.subCategory = words.slice(0, 2).join(' ');
-                        button.buttonText = button.buttonText.substring(subCategoryMatch[0].length).trim();
-                    } else {
-                        // Assign a default subCategory if parsing fails
-                        button.subCategory = 'General';
-                    }
-                }
-            });
 
-            if (needsUpdate) {
-                localStorage.setItem(`${directoryName}-customButtons`, JSON.stringify(savedButtons));
-            }
-
-            const groupedButtons = savedButtons.reduce((acc, button) => {
-                acc[button.section] = acc[button.section] || {};
-                acc[button.section][button.subCategory] = acc[button.section][button.subCategory] || [];
-                acc[button.section][button.subCategory].push(button);
-                return acc;
-            }, {});
-
-            const sortState = JSON.parse(localStorage.getItem(`${directoryName}-sortState`) || '{}');
-
-            const createHeaderClickHandler = (type, key) => (event) => {
+            const createCollapseClickHandler = (key) => (event) => {
                 event.stopPropagation();
-                // Re-read the state from localStorage inside the handler to avoid closure issues
-                const currentSortState = JSON.parse(localStorage.getItem(`${directoryName}-sortState`) || '{}');
-                const currentVal = currentSortState[key] === undefined ? 1 : currentSortState[key];
-                currentSortState[key] = (currentVal + 1) % 3;
-                localStorage.setItem(`${directoryName}-sortState`, JSON.stringify(currentSortState));
+                let collapseState = JSON.parse(localStorage.getItem(`${directoryName}-collapseState`) || '{}');
+                collapseState[key] = !collapseState[key];
+                localStorage.setItem(`${directoryName}-collapseState`, JSON.stringify(collapseState));
                 loadCustomButtons();
             };
 
-            for (const sectionName in groupedButtons) {
-                const sectionContainer = document.createElement('div');
-                sectionContainer.className = 'sidebar-section';
-                
-                const sectionHeader = document.createElement('h4');
-                const sectionKey = `section_${sectionName}`;
-                sortState[sectionKey] = sortState[sectionKey] || 1; // Default to creation order
-                sectionHeader.textContent = sectionName + (sortState[sectionKey] === 0 ? ' (Collapsed)' : sortState[sectionKey] === 1 ? ' (Original)' : ' (A-Z)');
-                sectionHeader.onclick = createHeaderClickHandler('section', sectionKey);
-                sectionContainer.appendChild(sectionHeader);
+            function renderTree(nodes, parentContainer, level, parentPath) {
+                if (!Array.isArray(nodes)) return;
 
-                if (sortState[sectionKey] > 0) { // Not collapsed
-                    const subCategoryNames = Object.keys(groupedButtons[sectionName]);
-                    if (sortState[sectionKey] === 2) { // A-Z sort
-                        subCategoryNames.sort((a, b) => a.localeCompare(b));
-                    }
+                // Sort all nodes alphabetically. Special case for '+1' button to always be first.
+                nodes.sort((a, b) => {
+                    if (a.name === '+1') return -1;
+                    if (b.name === '+1') return 1;
+                    return a.name.localeCompare(b.name);
+                });
 
-                    subCategoryNames.forEach(subCategoryName => {
-                        const subCategoryContainer = document.createElement('div');
-                        subCategoryContainer.className = 'sidebar-subcategory';
-                        
-                        const subCategoryHeader = document.createElement('h5');
-                        const subCategoryKey = `subcategory_${sectionName}_${subCategoryName}`;
-                        sortState[subCategoryKey] = sortState[subCategoryKey] || 1;
-                        subCategoryHeader.textContent = subCategoryName + (sortState[subCategoryKey] === 0 ? ' (Collapsed)' : sortState[subCategoryKey] === 1 ? ' (Original)' : ' (A-Z)');
-                        subCategoryHeader.onclick = createHeaderClickHandler('subcategory', subCategoryKey);
-                        subCategoryContainer.appendChild(subCategoryHeader);
-                        
-                        if (sortState[subCategoryKey] > 0) {
-                            const buttonsContainer = document.createElement('div');
-                            buttonsContainer.className = 'buttons-container';
-                            let buttons = groupedButtons[sectionName][subCategoryName];
+                nodes.forEach(node => {
+                    const currentPath = [...parentPath, node.name];
+                    const nodeKey = `node_${currentPath.join('_')}`;
 
-                            if (sortState[subCategoryKey] === 2) { // A-Z sort
-                                buttons = [...buttons].sort((a, b) => a.buttonText.localeCompare(b.buttonText));
-                            }
+                    if (node.type === 'category' && level < numElements) {
+                        const isCollapsed = collapseState[nodeKey] || false;
+                        const header = document.createElement(`h${4 + level}`);
+                        header.textContent = currentPath.join('-');
+                        header.style.marginLeft = `${level * 8}px`;
+                        header.style.cursor = 'pointer';
+                        header.onclick = createCollapseClickHandler(nodeKey);
+                        parentContainer.appendChild(header);
 
-                            buttons.forEach(buttonData => {
-                                buttonsContainer.appendChild(createSidebarButton(buttonData));
-                            });
-                            subCategoryContainer.appendChild(buttonsContainer);
+                        if (!isCollapsed && Array.isArray(node.children)) {
+                            renderTree(node.children, parentContainer, level + 1, currentPath);
                         }
-                        sectionContainer.appendChild(subCategoryContainer);
-                    });
+                    } else {
+                        function createButtonsFromSubtree(startingNode, basePath, textParts) {
+                            if (startingNode.type === 'button') {
+                                if (buttonVisibility[startingNode.id] === false) return;
+                                
+                                const combinedName = [...textParts, startingNode.name].join(' ');
+                                const finalButtonName = startingNode.specialType === 'plusOne' ? '+1' : combinedName;
+                                
+                                parentContainer.appendChild(createSidebarButton({ ...startingNode, name: finalButtonName }, basePath));
+
+                            } else if (startingNode.type === 'category' && Array.isArray(startingNode.children)) {
+                                const newTextParts = [...textParts, startingNode.name];
+                                startingNode.children.forEach(child => {
+                                    createButtonsFromSubtree(child, basePath, newTextParts);
+                                });
+                            }
+                        }
+                        // By passing an empty array `[]` as the initial textParts, we prevent the
+                        // duplication bug where the starting node's name was added twice. The
+                        // recursive function is responsible for building the entire name string.
+                        createButtonsFromSubtree(node, currentPath.slice(0, numElements), []);
+                    }
+                });
+            }
+
+            renderTree(customButtonTree, scrollContainer, 0, []);
+        }
+
+    function populateVisibleButtonsModal() {
+        visibleButtonsListContainer.innerHTML = '';
+        let customButtonTree = JSON.parse(localStorage.getItem(`${directoryName}-customButtons`) || '[]');
+        const buttonVisibility = JSON.parse(localStorage.getItem(`${directoryName}-buttonVisibility`) || '{}');
+        const numElements = parseInt(document.getElementById('num-elements-input').value, 10);
+
+        // We'll use a modified render function to build the checklist
+        function renderVisibilityChecklist(nodes, parentContainer, level, parentPath = []) {
+            if (!Array.isArray(nodes)) return;
+
+            // Use the same sorting as the main render function
+            nodes.sort((a, b) => {
+                if (a.name === '+1') return -1;
+                if (b.name === '+1') return 1;
+                if (a.type === 'category' && b.type !== 'category') return -1;
+                if (a.type !== 'category' && b.type === 'category') return 1;
+                return a.name.localeCompare(b.name);
+            });
+
+            nodes.forEach(node => {
+                const currentPath = [...parentPath, node.name];
+                if (node.type === 'category' && level <= numElements) {
+                    const header = document.createElement(`h${4 + level}`);
+                    header.textContent = currentPath.join('-');
+                    header.style.marginLeft = `${level * 8}px`;
+                    header.style.color = 'black';
+                    parentContainer.appendChild(header);
+                    
+                    const childrenContainer = document.createElement('div');
+                    renderVisibilityChecklist(node.children, childrenContainer, level + 1);
+                    parentContainer.appendChild(childrenContainer);
+
+                } else {
+                     function createCheckboxesFromSubtree(startingNode, textParts) {
+                        if (startingNode.type === 'button') {
+                            const allTextParts = [...textParts, startingNode.name];
+                            const buttonName = startingNode.specialType === 'plusOne' 
+                                ? '+1'
+                                : allTextParts.filter(p => p !== '+1').join(' ');
+                            
+                            const div = document.createElement('div');
+                            div.style.marginLeft = `${(numElements + 1) * 8}px`;
+                            div.style.display = 'flex';
+                            div.style.alignItems = 'center';
+
+                            const checkbox = document.createElement('input');
+                            checkbox.type = 'checkbox';
+                            checkbox.id = `vis-check-${startingNode.id}`;
+                            checkbox.checked = buttonVisibility[startingNode.id] !== false; // Default to visible
+                            
+                            checkbox.onchange = () => {
+                                buttonVisibility[startingNode.id] = checkbox.checked;
+                                localStorage.setItem(`${directoryName}-buttonVisibility`, JSON.stringify(buttonVisibility));
+                                loadCustomButtons(); // Re-render the main sidebar
+                            };
+
+                            const label = document.createElement('label');
+                            label.htmlFor = checkbox.id;
+                            label.textContent = buttonName;
+                            label.style.color = 'black';
+                            label.style.marginLeft = '4px';
+
+                            div.appendChild(checkbox);
+                            div.appendChild(label);
+                            parentContainer.appendChild(div);
+
+                        } else if (startingNode.type === 'category') {
+                            const newTextParts = [...textParts, startingNode.name];
+                            if(Array.isArray(startingNode.children)) {
+                                startingNode.children.forEach(child => createCheckboxesFromSubtree(child, newTextParts));
+                            }
+                        }
+                    }
+                    createCheckboxesFromSubtree(node, []);
                 }
-                scrollContainer.appendChild(sectionContainer);
+            });
+        }
+
+        renderVisibilityChecklist(customButtonTree, visibleButtonsListContainer, 0, []);
+    }
+
+    visibleButtonsBtn.addEventListener('click', () => {
+        populateVisibleButtonsModal();
+        visibleButtonsModal.style.display = 'block';
+    });
+
+    visibleButtonsModal.querySelector('.close').addEventListener('click', () => {
+        visibleButtonsModal.style.display = 'none';
+    });
+
+        function updateBottomBar() {
+            const infoDiv = document.getElementById('bottom-bar-info');
+            if (buttonsForRemoval.size === 1) {
+                const buttonId = buttonsForRemoval.values().next().value;
+                let customButtonTree = JSON.parse(localStorage.getItem(`${directoryName}-customButtons`) || '[]');
+
+                function findButtonPath(nodes, id, currentPath = []) {
+                    for (const node of nodes) {
+                        if (node.type === 'button' && String(node.id) === String(id)) {
+                            return { button: node, path: currentPath };
+                        }
+                        if (node.type === 'category' && node.children) {
+                            const result = findButtonPath(node.children, id, [...currentPath, node.name]);
+                            if (result) {
+                                return result;
+                            }
+                        }
+                    }
+                    return null;
+                }
+                
+                const result = findButtonPath(customButtonTree, buttonId);
+
+                if (result && result.path.length > 0) {
+                    const username = projectUsernameInput.value.trim() || 'username';
+                    const category = result.path[0];
+                    const fullButtonText = result.button.fullButtonText;
+                    infoDiv.textContent = `[${username}]_${category} ${fullButtonText}`;
+                } else {
+                    infoDiv.textContent = '1 item selected';
+                }
+
+            } else if (buttonsForRemoval.size > 1) {
+                infoDiv.textContent = `${buttonsForRemoval.size} items selected`;
+            } else {
+                infoDiv.textContent = '';
             }
         }
 
-        function createSidebarButton(buttonData) {
-            const { id, buttonText } = buttonData;
+        function createSidebarButton(buttonData, path) {
+            const { id, name, fullButtonText, specialType } = buttonData;
             
             const button = document.createElement('button');
-            button.textContent = buttonText;
+            button.textContent = name.replace(/[()]/g, ''); // Remove parentheses for display
             button.dataset.id = id;
+            const numElements = parseInt(document.getElementById('num-elements-input').value, 10);
+            button.style.paddingLeft = `${(numElements) * 8}px`; // Indent based on hierarchy depth
+
+            // Preserve selection state across re-renders
+            if (buttonsForRemoval.has(String(id))) {
+                button.classList.add('selected-for-removal');
+            }
 
             button.onclick = () => {
                 const buttonId = button.dataset.id;
-                if (buttonsForRemoval.has(buttonId)) {
+                const isCurrentlySelected = button.classList.contains('selected-for-removal');
+
+                if (isCurrentlySelected) {
                     buttonsForRemoval.delete(buttonId);
                     button.classList.remove('selected-for-removal');
                 } else {
@@ -1714,58 +2506,73 @@
                     button.classList.add('selected-for-removal');
                 }
                 updateRemoveButtonState();
+                updateBottomBar();
+                
+                // For '+1' buttons, we highlight differently
+                if (specialType === 'plusOne') {
+                    highlightMatchingThumbnails(path, '', !isCurrentlySelected, true);
+                } else {
+                    highlightMatchingThumbnails(path, fullButtonText, !isCurrentlySelected, false);
+                }
             };
 
-            button.style.cssText = `
-                width: 100%;
-                margin: 0;
-                padding: 0;
-                height: 36px;
-                background-color: #1877f2;
-                color: #ffffff;
-                border: 1px solid #444444;
-                border-top: none;
-                border-radius: 0;
-                font-size: 14px;
-                cursor: pointer;
-                box-sizing: border-box;
-                text-align: left;
-                display: block;
+            const fontSize = document.getElementById('font-size-slider').value;
+            button.style.cssText += `
+                width: 100%; margin: 0; padding-top: 0; padding-bottom: 0; height: 36px;
+                background-color: #1877f2; color: #ffffff; border: 1px solid #444444;
+                border-top: none; border-radius: 0; font-size: ${fontSize}px; cursor: pointer;
+                box-sizing: border-box; text-align: left; display: block;
             `;
+            button.style.textAlign = 'left';
             
             adjustButtonFontSize(button);
             return button;
         }
 
-        async function adjustButtonFontSize(button) {
-            const FONT_SIZE_STEP = 0.5;
-            const MIN_FONT_SIZE = 6;
-            const MAX_FONT_SIZE = 18; // Set a reasonable max
-            let fontSize = 14;
+        function highlightMatchingThumbnails(path, fullButtonText, shouldSelect, isCategoryOnly) {
+            const username = projectUsernameInput.value.trim();
+            if (!username) return;
 
-            await new Promise(resolve => requestAnimationFrame(resolve));
+            const category = path[0];
+            const prefix = `[${username}]_${category}`;
 
-            button.style.whiteSpace = 'nowrap';
+            const currentCanvas = canvases.get(activeCanvasId);
+            if (currentCanvas) {
+                currentCanvas.thumbnails.forEach(thumb => {
+                    const baseFilename = thumb.dataset.fileName.substring(0, thumb.dataset.fileName.lastIndexOf('.'));
+                    const filenameWithoutNumber = baseFilename.replace(/\s*\(\d+\)$/, '').trim();
+                    
+                    let matches = false;
+                    if (isCategoryOnly) {
+                        // For +1, we want an exact match with the prefix, and nothing after it.
+                        matches = filenameWithoutNumber === prefix;
+                    } else {
+                        // For regular buttons, it must start with the prefix and contain the elements.
+                        const expectedFilenamePart = `${prefix} ${fullButtonText}`;
+                        matches = filenameWithoutNumber.startsWith(expectedFilenamePart);
+                    }
+
+                    if (matches) {
+                        if (shouldSelect) {
+                            if (!selectedThumbnails.has(thumb)) {
+                                thumb.classList.add('selected');
+                                selectedThumbnails.add(thumb);
+                            }
+                        } else {
+                            if (selectedThumbnails.has(thumb)) {
+                                thumb.classList.remove('selected');
+                                selectedThumbnails.delete(thumb);
+                            }
+                        }
+                    }
+                });
+            }
+            updatePlayButtonState();
+        }
+
+        function adjustButtonFontSize(button) {
+            const fontSize = document.getElementById('font-size-slider').value;
             button.style.fontSize = `${fontSize}px`;
-
-            // Decrease font size if text overflows
-            while (button.scrollWidth > button.clientWidth && fontSize > MIN_FONT_SIZE) {
-                fontSize -= FONT_SIZE_STEP;
-                button.style.fontSize = `${fontSize}px`;
-            }
-
-            // Increase font size if there's extra space
-            while (button.scrollWidth < button.clientWidth && fontSize < MAX_FONT_SIZE) {
-                const nextFontSize = fontSize + FONT_SIZE_STEP;
-                button.style.fontSize = `${nextFontSize}px`;
-                // If the new size makes it overflow, break the loop
-                if (button.scrollWidth > button.clientWidth) {
-                    button.style.fontSize = `${fontSize}px`; // Revert to the last fitting size
-                    break;
-                }
-                fontSize = nextFontSize;
-            }
-            button.style.whiteSpace = 'normal';
         }
 
         newFilenameBtn.addEventListener('click', () => {
@@ -1780,12 +2587,28 @@
             }
 
             if (confirm(`Are you sure you want to remove ${buttonsForRemoval.size} button(s)?`)) {
-                let savedButtons = JSON.parse(localStorage.getItem(`${directoryName}-customButtons`) || '[]');
+                let buttonTree = JSON.parse(localStorage.getItem(`${directoryName}-customButtons`) || '[]');
                 
-                // Filter out the buttons that are marked for removal by their ID
-                savedButtons = savedButtons.filter(btnData => !buttonsForRemoval.has(String(btnData.id)));
+                function removeButtonsFromTree(nodes) {
+                    if (!Array.isArray(nodes)) return [];
+                    
+                    // Filter out leaf buttons that should be removed
+                    let filteredNodes = nodes.filter(node => {
+                        return !(node.type === 'button' && buttonsForRemoval.has(String(node.id)));
+                    });
+
+                    // Recurse into remaining category nodes
+                    return filteredNodes.map(node => {
+                        if (node.type === 'category' && node.children) {
+                            node.children = removeButtonsFromTree(node.children);
+                        }
+                        return node;
+                    // After removing children, a category might become empty. Remove it.
+                    }).filter(node => !(node.type === 'category' && (!node.children || node.children.length === 0)));
+                }
                 
-                localStorage.setItem(`${directoryName}-customButtons`, JSON.stringify(savedButtons));
+                const newButtonTree = removeButtonsFromTree(buttonTree);
+                localStorage.setItem(`${directoryName}-customButtons`, JSON.stringify(newButtonTree));
 
                 buttonsForRemoval.clear();
                 loadCustomButtons();
@@ -1932,6 +2755,7 @@
             const layoutName = layoutNameInput.value.trim();
             if (!layoutName) {
                 alert('Please enter a name for the layout.');
+                layoutNameInput.focus();
                 return;
             }
             if (!isLayoutFrozen) {
@@ -1959,6 +2783,12 @@
             populateLayoutsDropdown();
             alert(`Layout "${layoutName}" saved!`);
         }
+
+        layoutNameInput.addEventListener('input', () => {
+            if (layoutNameInput.value.trim() !== '') {
+                saveLayoutBtn.textContent = 'Save Layout';
+            }
+        });
 
         function loadLayout() {
             const selectedValue = layoutSelect.value;
@@ -2084,6 +2914,11 @@
 
             layoutSelect.innerHTML = '<option value="" disabled hidden>Select Layout</option>';
 
+            const landscapeOption = document.createElement('option');
+            landscapeOption.value = 'widescreen_rotate';
+            landscapeOption.textContent = 'Widescreen/Rotate';
+            layoutSelect.appendChild(landscapeOption);
+
             if (scanLayoutNames.length > 0) {
                 const scanGroup = document.createElement('optgroup');
                 scanGroup.label = 'Scan Layouts';
@@ -2182,10 +3017,18 @@
 
         resizer.addEventListener('mousedown', (e) => {
             e.preventDefault();
-            document.addEventListener('mousemove', handleMouseMove);
-            document.addEventListener('mouseup', () => {
+
+            const handleMouseUp = () => {
                 document.removeEventListener('mousemove', handleMouseMove);
-            });
+                document.removeEventListener('mouseup', handleMouseUp);
+
+                // Adjust font size for all buttons after resizing
+                const buttons = document.querySelectorAll('#sidebar-scroll-container button');
+                buttons.forEach(button => adjustButtonFontSize(button));
+            };
+
+            document.addEventListener('mousemove', handleMouseMove);
+            document.addEventListener('mouseup', handleMouseUp);
         });
 
         function handleMouseMove(e) {
