@@ -122,7 +122,7 @@
             background-color: #1877f2;
         }
         .bottom-bar {
-            padding: 10px;
+            padding: 10px 10px 10px 0px;
             border-top: 1px solid #444444;
             display: flex;
             align-items: center;
@@ -223,6 +223,9 @@
         .landscape-row.selected-edit {
             outline: 3px solid yellow;
         }
+        .landscape-row.selected-play {
+            outline: 3px solid cyan;
+        }
         .thumbnail-wrapper {
             display: inline-block;
             vertical-align: top;
@@ -235,6 +238,7 @@
             padding: 2px;
             word-wrap: break-word;
             max-width: 256px; /* Match default thumbnail width */
+            display: none; /* Hidden by default */
         }
         .thumbnail-wrapper.selected .thumbnail {
             box-shadow: 0 0 0 3px #007bff, 0 4px 8px rgba(0,0,0,0.4);
@@ -389,6 +393,20 @@
             border-left: none;
         }
 
+        #landscape-buttons button {
+            height: 36px;
+            padding: 0 8px;
+            border: 1px solid #444444;
+            background-color: #1877f2;
+            color: #ffffff;
+            border-radius: 0;
+            font-size: 14px;
+            box-sizing: border-box;
+            margin-right: 0;
+            white-space: nowrap;
+            cursor: pointer;
+        }
+
 
         /* Style for layout name input */
         #layout-name-input {
@@ -444,10 +462,6 @@
 
         .nested-dropdown {
             position: relative;
-        }
-
-        .nested-dropdown:hover .nested-dropdown-content {
-            display: block;
         }
 
         .nested-dropdown-content {
@@ -581,7 +595,19 @@
                         <a href="#" id="rename-canvas-btn">Rename Canvas</a>
                         <a href="#" id="scan-for-buttons-btn">Scan for Buttons</a>
                         <a href="#" id="remove-all-buttons-btn">Remove All Buttons</a>
-                        <a href="#" id="generate-edit-btn">Generate Edit Thumbnails</a>
+                        <div class="nested-dropdown" id="thumbnails-menu">
+                            <a href="#">Thumbnails</a>
+                            <div class="nested-dropdown-content" id="thumbnails-menu-list">
+                                <a href="#" id="generate-folder-thumbnails-btn">Generate folder thumbnails</a>
+                                <a href="#" id="refresh-thumbnails-btn">Refresh Thumbnails</a>
+                                <a href="#" id="generate-edit-thumbnails-btn">Generate Thumbnails for Edit Mode</a>
+                                <a href="#" id="generate-edit-thumbnails-new-btn">Generate Thumbnails for Edit Mode for New Files</a>
+                            </div>
+                        </div>
+                        <div id="edit-mode-options" style="display:none;">
+                            <a href="#" id="edit-mode-btn">Edit Mode: Off</a>
+                            <a href="#" id="generate-edit-bat-btn">Generate Edit Bat</a>
+                        </div>
                         <div style="padding: 12px 16px; border-top: 1px solid #ddd;">
                             <label for="num-elements-input" style="display: block; margin-bottom: 5px;">Number of Elements</label>
                             <input type="number" id="num-elements-input" min="1" value="1" style="width: 100%; box-sizing: border-box; background-color: #ffffff; border: 1px solid #444; color: black; padding: 4px;">
@@ -593,7 +619,7 @@
                             <label for="font-size-slider" style="display: block; margin-bottom: 5px;">Button Font Size</label>
                             <input type="range" id="font-size-slider" min="8" max="24" value="14" style="width: 100%;">
                         </div>
-                        <div class="nested-dropdown">
+                        <div class="nested-dropdown" id="recent-directories-dropdown">
                             <a href="#">Recent Directories</a>
                             <div class="nested-dropdown-content" id="recent-directories-list">
                                 <!-- Populated by JS -->
@@ -651,15 +677,17 @@
             </div>
             <div class="bottom-bar">
                 <div style="display: flex;">
-                    <button id="new-filename-btn" style="height: 36px; padding: 0 12px; border: 1px solid #444444; background-color: #1877f2; color: #ffffff; border-radius: 0; font-size: 14px; box-sizing: border-box; cursor: pointer;">New</button>
+                    <button id="new-filename-btn" style="height: 36px; padding: 0; width: 60px; text-align: center; border: 1px solid #444444; background-color: #1877f2; color: #ffffff; border-radius: 0; font-size: 14px; box-sizing: border-box; cursor: pointer;">New</button>
                     <button id="remove-btn" style="height: 36px; padding: 0 12px; border: 1px solid #444444; border-left: none; background-color: #1877f2; color: #ffffff; border-radius: 0; font-size: 14px; box-sizing: border-box; cursor: pointer;">Remove</button>
                 </div>
                 <div id="bottom-bar-info" style="flex-grow: 1; text-align: right;"></div>
                 <div id="landscape-buttons" style="display: none;">
+                    <button id="deselect-row-btn">Deselect</button>
                     <button id="landscape-btn">Landscape</button>
                     <button id="landscape-rotate-btn">Landscape Rotate</button>
                     <button id="delete-btn">Delete</button>
                     <button id="edit-btn">Edit</button>
+                    <button id="select-btn">Select</button>
                 </div>
             </div>
         </div>
@@ -740,13 +768,14 @@
     <div id="final-landscape-script-modal" class="modal">
         <div class="modal-content">
             <span class="close">&times;</span>
-            <h2>Final Landscape/Rotate Batch Script</h2>
-            <p>This script will process your selections. Run it in your main video directory.</p>
+            <h2>Final Processing PowerShell Script</h2>
+            <p>This script will process your selections. Right-click and "Run with PowerShell" in your main video directory.</p>
             <textarea id="final-landscape-batch-script" rows="10" cols="80" readonly></textarea>
             <button id="copy-final-landscape-script-btn">Copy to Clipboard</button>
-            <a id="download-final-landscape-script-link" download="process_selections.bat">
-                <button>Download .bat File</button>
+            <a id="download-final-landscape-script-link" download="process_selections.ps1">
+                <button>Download .ps1 File</button>
             </a>
+            <button id="reload-final-script-page-btn" style="display: none;">Reload Page</button>
         </div>
     </div>
 
@@ -827,8 +856,13 @@
         const visibleButtonsBtn = document.getElementById('visible-buttons-btn');
         const visibleButtonsModal = document.getElementById('visible-buttons-modal');
         const visibleButtonsListContainer = document.getElementById('visible-buttons-list-container');
-        const generateEditBtn = document.getElementById('generate-edit-btn');
+        const thumbnailsMenu = document.getElementById('thumbnails-menu');
+        const generateFolderThumbnailsBtn = document.getElementById('generate-folder-thumbnails-btn');
+        const refreshThumbnailsBtn = document.getElementById('refresh-thumbnails-btn');
+        const generateEditThumbnailsBtn = document.getElementById('generate-edit-thumbnails-btn');
+        const generateEditThumbnailsNewBtn = document.getElementById('generate-edit-thumbnails-new-btn');
         const editScriptModal = document.getElementById('edit-script-modal');
+        const recentDirectoriesDropdown = document.getElementById('recent-directories-dropdown');
         
         let buttonsForRemoval = new Set();
         let filenameParts = [];
@@ -846,6 +880,7 @@
         const landscapeRotateSelections = new Set();
         const deleteSelections = new Set();
         const editSelections = new Set();
+        const playSelections = new Set();
 
         function updateRemoveButtonState() {
             if (buttonsForRemoval.size === 0) {
@@ -884,8 +919,7 @@
             closeCanvasBtn.disabled = !(currentCanvas && currentCanvas.thumbnails.length === 0 && canvases.size > 1 && currentCanvas.name !== 'Renamed');
             
             populateCanvasDropdown();
-            updateContentSpacer();
-            applyThumbnailSize();
+            layoutThumbnailsInGrid();
         }
 
         function populateCanvasDropdown() {
@@ -918,10 +952,11 @@
             }
             
             currentPlaylistIndex = index;
-            const thumb = playlist[index];
-            const thumbName = thumb.dataset.fileName.substring(0, thumb.dataset.fileName.lastIndexOf('.'));
-            
-            const videoFile = allVideoFiles.find(f => f.name.startsWith(thumbName));
+            const thumbWrapper = playlist[index];
+            const thumbName = thumbWrapper.dataset.fileName.substring(0, thumbWrapper.dataset.fileName.lastIndexOf('.'));
+
+            // Find the video file by matching the base name, ignoring the extension
+            const videoFile = allVideoFiles.find(f => f.name.substring(0, f.name.lastIndexOf('.')) === thumbName);
             
             if (videoFile) {
                 currentVideoUrl = URL.createObjectURL(videoFile);
@@ -934,12 +969,21 @@
         }
 
         function updatePlayButtonState() {
-            const numSelected = selectedThumbnails.size;
-            playBtn.disabled = numSelected === 0;
-            splitBtn.disabled = numSelected === 0;
-            sendToCanvasSelect.disabled = numSelected === 0;
-            hideBtn.disabled = numSelected === 0;
-
+            const editModeBtn = document.getElementById('edit-mode-btn');
+            const inEditMode = editModeBtn && editModeBtn.textContent.includes('On');
+            
+            if (inEditMode) {
+                playBtn.disabled = playSelections.size === 0;
+                splitBtn.disabled = true;
+                sendToCanvasSelect.disabled = true;
+                hideBtn.disabled = true;
+            } else {
+                const numSelected = selectedThumbnails.size;
+                playBtn.disabled = numSelected === 0;
+                splitBtn.disabled = numSelected === 0;
+                sendToCanvasSelect.disabled = numSelected === 0;
+                hideBtn.disabled = numSelected === 0;
+            }
         }
 
         function updateContentSpacer() {
@@ -971,6 +1015,12 @@
             await loadRecentDirectories();
             updateRemoveButtonState();
 
+            recentDirectoriesDropdown.addEventListener('click', (event) => {
+                event.stopPropagation();
+                const list = document.getElementById('recent-directories-list');
+                list.style.display = list.style.display === 'block' ? 'none' : 'block';
+            });
+
             if (!directoryName) {
                 directoryName = 'default'; // For testing purposes
             }
@@ -993,19 +1043,25 @@
                 localStorage.setItem(`${directoryName}-fontSize`, fontSizeSlider.value);
             });
 
-            try {
-                const dirHandle = await getDb('lastDirectory');
-                if (dirHandle) {
-                    if (await dirHandle.queryPermission({ mode: 'read' }) !== 'granted') {
-                        if (await dirHandle.requestPermission({ mode: 'read' }) !== 'granted') {
-                            throw new Error('Permission to access the last directory was denied.');
-                        }
+            const dirHandle = await getDb('lastDirectory');
+            if (dirHandle && typeof dirHandle.queryPermission === 'function') {
+                try {
+                    const hasPermission = await dirHandle.queryPermission({ mode: 'read' }) === 'granted' ||
+                                          await dirHandle.requestPermission({ mode: 'read' }) === 'granted';
+                    if (hasPermission) {
+                        await processDirectory(dirHandle);
+                    } else {
+                         console.error('Permission to access the last directory was denied.');
+                         await setDb('lastDirectory', null);
                     }
-                    await processDirectory(dirHandle);
+                } catch (err) {
+                    console.error('Could not auto-load directory:', err);
+                    await setDb('lastDirectory', null);
+                    await loadRecentDirectories(); 
                 }
-            } catch (err) {
-                console.error('Could not auto-load directory:', err);
-                await setDb('lastDirectory', null); 
+            } else if (dirHandle) {
+                console.warn('Last directory handle from IndexedDB was invalid. Clearing.');
+                await setDb('lastDirectory', null);
             }
         }
 
@@ -1029,7 +1085,13 @@
             event.stopPropagation();
         });
 
-        generateEditBtn.addEventListener('click', () => {
+        thumbnailsMenu.addEventListener('click', (event) => {
+            event.stopPropagation();
+            const list = document.getElementById('thumbnails-menu-list');
+            list.style.display = list.style.display === 'block' ? 'none' : 'block';
+        });
+
+        generateEditThumbnailsBtn.addEventListener('click', () => {
             if (allVideoFiles.length === 0) {
                 alert('No video files loaded. Please load a directory first.');
                 return;
@@ -1060,31 +1122,50 @@
         });
 
         document.getElementById('landscape-btn').addEventListener('click', () => {
-            landscapeSelectionMode = 'landscape';
-            document.getElementById('landscape-btn').style.backgroundColor = 'blue';
-            document.getElementById('landscape-rotate-btn').style.backgroundColor = '';
+            landscapeSelectionMode = landscapeSelectionMode === 'landscape' ? '' : 'landscape';
+            updateSelectionModeButtons();
         });
 
         document.getElementById('landscape-rotate-btn').addEventListener('click', () => {
-            landscapeSelectionMode = 'landscape-rotate';
+            landscapeSelectionMode = landscapeSelectionMode === 'landscape-rotate' ? '' : 'landscape-rotate';
             updateSelectionModeButtons();
         });
 
         document.getElementById('delete-btn').addEventListener('click', () => {
-            landscapeSelectionMode = 'delete';
+            landscapeSelectionMode = landscapeSelectionMode === 'delete' ? '' : 'delete';
             updateSelectionModeButtons();
         });
 
         document.getElementById('edit-btn').addEventListener('click', () => {
-            landscapeSelectionMode = 'edit';
+            landscapeSelectionMode = landscapeSelectionMode === 'edit' ? '' : 'edit';
             updateSelectionModeButtons();
         });
 
+        document.getElementById('select-btn').addEventListener('click', () => {
+            landscapeSelectionMode = landscapeSelectionMode === 'play' ? '' : 'play';
+            updateSelectionModeButtons();
+        });
+
+        document.getElementById('deselect-row-btn').addEventListener('click', () => {
+            landscapeSelections.clear();
+            landscapeRotateSelections.clear();
+            deleteSelections.clear();
+            editSelections.clear();
+            playSelections.clear();
+
+            document.querySelectorAll('.landscape-row').forEach(row => {
+                row.classList.remove('selected-landscape', 'selected-landscape-rotate', 'selected-delete', 'selected-edit', 'selected-play');
+            });
+        });
+
         function updateSelectionModeButtons() {
-            document.getElementById('landscape-btn').style.backgroundColor = landscapeSelectionMode === 'landscape' ? 'blue' : '';
-            document.getElementById('landscape-rotate-btn').style.backgroundColor = landscapeSelectionMode === 'landscape-rotate' ? 'green' : '';
-            document.getElementById('delete-btn').style.backgroundColor = landscapeSelectionMode === 'delete' ? 'purple' : '';
-            document.getElementById('edit-btn').style.backgroundColor = landscapeSelectionMode === 'edit' ? 'yellow' : '';
+            const blue = '#1877f2';
+            const red = '#d93025';
+            document.getElementById('landscape-btn').style.backgroundColor = landscapeSelectionMode === 'landscape' ? red : blue;
+            document.getElementById('landscape-rotate-btn').style.backgroundColor = landscapeSelectionMode === 'landscape-rotate' ? red : blue;
+            document.getElementById('delete-btn').style.backgroundColor = landscapeSelectionMode === 'delete' ? red : blue;
+            document.getElementById('edit-btn').style.backgroundColor = landscapeSelectionMode === 'edit' ? red : blue;
+            document.getElementById('select-btn').style.backgroundColor = landscapeSelectionMode === 'play' ? red : blue;
         }
 
 
@@ -1101,10 +1182,12 @@
         });
 
         window.addEventListener('click', (event) => {
-            if (!event.target.matches('.sidebar-cog-btn')) {
-                const dropdown = document.getElementById('cog-dropdown');
+            const dropdown = document.getElementById('cog-dropdown');
+            // If the click is outside the cog button AND outside the dropdown content
+            if (!event.target.matches('.sidebar-cog-btn') && !dropdown.contains(event.target)) {
                 if (dropdown.style.display === 'block') {
                     dropdown.style.display = 'none';
+                    document.getElementById('recent-directories-list').style.display = 'none';
                 }
             }
         });
@@ -1374,7 +1457,23 @@
         }
 
         playBtn.addEventListener('click', () => {
-            playlist = Array.from(selectedThumbnails);
+            const editModeBtn = document.getElementById('edit-mode-btn');
+            const inEditMode = editModeBtn && editModeBtn.textContent.includes('On');
+
+            if (inEditMode) {
+                if (playSelections.size === 0) return;
+                playlist = Array.from(playSelections).map(videoName => {
+                    const videoFile = allVideoFiles.find(f => f.name.startsWith(videoName));
+                    if (videoFile) {
+                        // Create a mock wrapper that loadVideo can use
+                        return { dataset: { fileName: videoFile.name.replace(/\.[^/.]+$/, ".jpg") } };
+                    }
+                    return null;
+                }).filter(Boolean);
+            } else {
+                playlist = Array.from(selectedThumbnails);
+            }
+
             if (playlist.length > 0) {
                 videoOverlay.style.display = 'flex';
                 loadVideo(0);
@@ -1408,26 +1507,93 @@
             const newSize = event.target.value;
             localStorage.setItem('thumbnailSize', newSize);
             const editModeBtn = document.getElementById('edit-mode-btn');
-            if (editModeBtn && editModeBtn.textContent.includes('Off')) {
+            if (editModeBtn && editModeBtn.textContent.includes('On')) {
                 layoutLandscapeThumbnails();
             } else {
-                applyThumbnailSize();
+                layoutThumbnailsInGrid();
             }
         });
 
-        function applyThumbnailSize() {
+        function layoutThumbnailsInGrid() {
+            if (isLayoutFrozen) {
+                const scale = parseFloat(sizeSelector.value);
+                thumbnailContainer.querySelectorAll('.thumbnail-wrapper').forEach(wrapper => {
+                    const thumb = wrapper.querySelector('.thumbnail');
+                    const nameDiv = wrapper.querySelector('.thumbnail-name');
+                    const originalWidth = thumb.dataset.originalWidth;
+                    if (originalWidth) {
+                        const scaledWidth = originalWidth * scale;
+                        thumb.style.width = scaledWidth + 'px';
+                        thumb.style.height = 'auto';
+                        nameDiv.style.maxWidth = scaledWidth + 'px';
+                    }
+                });
+                updateContentSpacer();
+                return;
+            }
+
             const scale = parseFloat(sizeSelector.value);
-            const thumbnails = document.querySelectorAll('.thumbnail');
-            thumbnails.forEach(thumb => {
-                const originalWidth = thumb.dataset.originalWidth;
-                if (originalWidth) {
-                    thumb.style.width = (originalWidth * scale) + 'px';
-                    thumb.style.height = 'auto';
+            const containerWidth = thumbnailContainer.clientWidth;
+            let xOffset = 20;
+            let yOffset = 20;
+            let maxRowHeight = 0;
+
+            const wrappers = thumbnailContainer.querySelectorAll('.thumbnail-wrapper');
+
+            wrappers.forEach(wrapper => {
+                const thumb = wrapper.querySelector('.thumbnail');
+                const nameDiv = wrapper.querySelector('.thumbnail-name');
+                
+                // Temporarily make the name visible to get its height for layout calculation
+                const originalDisplay = nameDiv.style.display;
+                nameDiv.style.display = 'block';
+
+                const originalWidth = parseFloat(thumb.dataset.originalWidth);
+                const originalHeight = parseFloat(thumb.dataset.originalHeight);
+                
+                const scaledWidth = originalWidth * scale;
+                const scaledHeight = originalHeight * scale;
+
+                nameDiv.style.maxWidth = scaledWidth + 'px';
+                const nameHeight = nameDiv.offsetHeight;
+                
+                // Restore the original display property
+                nameDiv.style.display = originalDisplay;
+
+                const wrapperHeight = scaledHeight + nameHeight + 4;
+
+                if (xOffset + scaledWidth + 20 > containerWidth && xOffset > 20) {
+                    xOffset = 20;
+                    yOffset += maxRowHeight + 20;
+                    maxRowHeight = 0;
                 }
+                
+                wrapper.style.position = 'absolute';
+                wrapper.style.left = xOffset + 'px';
+                wrapper.style.top = yOffset + 'px';
+                thumb.style.width = scaledWidth + 'px';
+                thumb.style.height = scaledHeight + 'px';
+
+                if (wrapperHeight > maxRowHeight) {
+                    maxRowHeight = wrapperHeight;
+                }
+                
+                xOffset += scaledWidth + 20;
             });
+
+            updateContentSpacer();
         }
 
         async function processDirectory(dirHandle) {
+            // --- Clear previous state ---
+            thumbnailContainer.innerHTML = ''; // Clear thumbnails
+            document.getElementById('sidebar-scroll-container').innerHTML = ''; // Clear buttons
+            canvases.clear();
+            allThumbnails = [];
+            isLayoutFrozen = false;
+            document.getElementById('edit-mode-options').style.display = 'none';
+
+
             currentDirHandle = dirHandle;
             await setDb('lastDirectory', dirHandle);
             
@@ -1444,6 +1610,7 @@
             await loadRecentDirectories();
 
             directoryName = dirHandle.name;
+            document.title = directoryName; // Update page title
             projectUsernameInput.value = localStorage.getItem(`${directoryName}-projectUsername`) || '';
 
             const savedNumElements = localStorage.getItem(`${directoryName}-numElements`);
@@ -1454,7 +1621,8 @@
 
             loadCustomButtons();
 
-            let hasEditThumbnails = false;
+            try {
+                let hasEditThumbnails = false;
             let hasLandscapeVideos = false;
             let hasLandscapeRotateVideos = false;
             let hasEditVideos = false;
@@ -1481,40 +1649,40 @@
 
 
             if (hasEditThumbnails) {
-                const editModeBtn = document.createElement('a');
-                editModeBtn.href = '#';
-                editModeBtn.textContent = 'Edit Mode: On';
-                editModeBtn.id = 'edit-mode-btn';
-                document.getElementById('cog-dropdown').appendChild(editModeBtn);
+                const editModeOptions = document.getElementById('edit-mode-options');
+                const editModeBtn = document.getElementById('edit-mode-btn');
+                const generateBatBtn = document.getElementById('generate-edit-bat-btn');
 
-                const generateBatBtn = document.createElement('a');
-                generateBatBtn.href = '#';
-                generateBatBtn.textContent = 'Generate Edit Bat';
-                generateBatBtn.id = 'generate-edit-bat-btn';
+                editModeOptions.style.display = 'block';
+                
+                // Reset state for the new directory
+                editModeBtn.textContent = 'Edit Mode Off';
                 generateBatBtn.style.display = 'none';
-                document.getElementById('cog-dropdown').appendChild(generateBatBtn);
+                document.getElementById('landscape-buttons').style.display = 'none';
+                
+                // --- Attach listeners only once ---
+                if (!editModeBtn.dataset.listenerAttached) {
+                    editModeBtn.dataset.listenerAttached = 'true';
+                    generateBatBtn.dataset.listenerAttached = 'true';
 
-                editModeBtn.addEventListener('click', () => {
-                    // The button now reflects the action, so "On" means the user wants to turn it on.
-                    if (editModeBtn.textContent.includes('On')) {
-                        renderEditMode();
-                        document.getElementById('landscape-buttons').style.display = 'flex';
-                        generateBatBtn.style.display = 'block';
-                        editModeBtn.textContent = 'Edit Mode: Off'; // Now it's on, so the button offers to turn it off.
-                    } else {
-                        // Turn the mode off
-                        document.getElementById('landscape-buttons').style.display = 'none';
-                        generateBatBtn.style.display = 'none';
-                        editModeBtn.textContent = 'Edit Mode: On'; // Now it's off, so the button offers to turn it on.
-                        // Reload the original thumbnail layout
-                        renderCanvas(activeCanvasId);
-                    }
-                });
+                    editModeBtn.addEventListener('click', () => {
+                        if (editModeBtn.textContent.includes('Off')) {
+                            renderEditMode();
+                            generateBatBtn.style.display = 'block';
+                            editModeBtn.textContent = 'Edit Mode On';
+                        } else {
+                            document.getElementById('landscape-buttons').style.display = 'none';
+                            generateBatBtn.style.display = 'none';
+                            editModeBtn.textContent = 'Edit Mode Off';
+                            renderCanvas(activeCanvasId);
+                        }
+                    });
 
-                generateBatBtn.addEventListener('click', () => {
-                    generateFinalBatchScript();
-                    document.getElementById('final-landscape-script-modal').style.display = 'block';
-                });
+                    generateBatBtn.addEventListener('click', () => {
+                        generateFinalBatchScript();
+                        document.getElementById('final-landscape-script-modal').style.display = 'block';
+                    });
+                }
             }
 
             isLayoutFrozen = false;
@@ -1524,6 +1692,15 @@
             allVideoFiles = [];
             let thumbnailFiles = [];
             let hasThumbnailsSubdir = false;
+
+            async function recursivelyFindThumbnails(dirHandle, pathPrefix = '') {
+                const thumbnailsDirHandle = await dirHandle.getDirectoryHandle('Thumbnails');
+                for await (const entry of thumbnailsDirHandle.values()) {
+                    if (entry.kind === 'file' && entry.name.match(/\.(jpe?g|png|gif|webp)$/i)) {
+                        thumbnailFiles.push(await entry.getFile());
+                    }
+                }
+            }
 
             scanLayouts = {}; // Reset scan layouts
             try {
@@ -1551,13 +1728,18 @@
             }
 
             try {
-                const thumbnailsDirHandle = await dirHandle.getDirectoryHandle('Thumbnails');
-                for await (const entry of thumbnailsDirHandle.values()) {
-                    if (entry.kind === 'file' && entry.name.match(/\.(jpe?g|png|gif|webp)$/i)) {
-                        thumbnailFiles.push(await entry.getFile());
+                // Find thumbnails in the root and other key directories
+                await recursivelyFindThumbnails(dirHandle);
+                hasThumbnailsSubdir = true;
+
+                for (const subDir of ['Landscape', 'Landscape Rotate', 'Edit']) {
+                    try {
+                        const subDirHandle = await dirHandle.getDirectoryHandle(subDir);
+                        await recursivelyFindThumbnails(subDirHandle, subDir);
+                    } catch (e) {
+                        // Subdirectory doesn't exist, which is fine.
                     }
                 }
-                hasThumbnailsSubdir = true;
             } catch (e) {
                 hasThumbnailsSubdir = false;
             }
@@ -1573,6 +1755,7 @@
                         const img = new Image();
                         img.onload = () => {
                             img.dataset.originalWidth = img.width;
+                            img.dataset.originalHeight = img.height;
                             resolve(img);
                         };
                         img.onerror = reject;
@@ -1585,8 +1768,10 @@
 
                 Promise.all(imageLoadPromises).then(async loadedImages => {
                     allThumbnails = loadedImages;
+                    
+                    try {
+                        if (!savedCanvasData || !Array.isArray(savedCanvasData.canvases)) throw new Error("No valid saved data");
 
-                    if (savedCanvasData) {
                         canvases = new Map(savedCanvasData.canvases.map(c => [c.id, { ...c, thumbnails: [] }]));
                         activeCanvasId = savedCanvasData.activeCanvasId;
 
@@ -1594,6 +1779,7 @@
 
                         savedCanvasData.canvases.forEach(savedCanvas => {
                             const canvas = canvases.get(savedCanvas.id);
+                             if (!canvas) return; // Skip if a canvas from save data doesn't exist
                             savedCanvas.thumbnails.forEach(savedThumb => {
                                 const thumb = thumbMap.get(savedThumb.fileName);
                                 if (thumb) {
@@ -1608,9 +1794,18 @@
                                 }
                             });
                         });
-                    } else {
+                         // Verify that the active canvas actually exists, otherwise reset it.
+                        if (!canvases.has(activeCanvasId)) {
+                            activeCanvasId = canvases.keys().next().value || 1;
+                        }
+
+                    } catch (err) {
+                        console.warn("Could not restore canvas from saved data. Deleting invalid data and loading fresh.", err);
+                        localStorage.removeItem(`${directoryName}-canvasData`); // Self-heal by deleting bad data
+                        canvases.clear();
                         canvases.set(1, { id: 1, name: 'Canvas 1', thumbnails: [...allThumbnails] });
                         activeCanvasId = 1;
+                        isLayoutFrozen = false;
                     }
 
                     let renamedCanvas = Array.from(canvases.values()).find(c => c.name === 'Renamed');
@@ -1620,7 +1815,7 @@
                     }
 
                     // --- Auto-organize processed thumbnails ---
-                    if (hasLandscapeVideos || hasLandscapeRotateVideos) {
+                    if (hasLandscapeVideos || hasLandscapeRotateVideos || hasEditVideos) {
                         const organizeProcessedThumbnails = async () => {
                             const getOrCreateCanvas = (name) => {
                                 let canvas = Array.from(canvases.values()).find(c => c.name === name);
@@ -1720,38 +1915,22 @@
                         });
 
 
-                        wrapper.addEventListener('click', (e) => {
-                            if (isMultiSelectMode || e.ctrlKey || e.metaKey) {
-                                if (selectedThumbnails.has(wrapper)) {
-                                    wrapper.classList.remove('selected');
-                                    selectedThumbnails.delete(wrapper);
-                                } else {
-                                    wrapper.classList.add('selected');
-                                    selectedThumbnails.add(wrapper);
-                                }
-                            } else {
-                                selectedThumbnails.forEach(t => t.classList.remove('selected'));
-                                selectedThumbnails.clear();
-                                wrapper.classList.add('selected');
-                                selectedThumbnails.add(wrapper);
-                            }
-                            updatePlayButtonState();
-                        });
                     });
                     
                     populateCanvasDropdown();
                     renderCanvas(activeCanvasId);
-                    applyThumbnailSize();
-                    if (isLayoutFrozen) {
-                        freezeLayout();
-                    }
                 });
 
             } else if (allVideoFiles.length > 0) {
                 generateBatchScript(allVideoFiles, directoryName);
                 scriptModal.style.display = 'block';
             }
-            populateLayoutsDropdown();
+            } catch (err) {
+                console.error("A critical error occurred while processing the directory:", err);
+                alert("An unexpected error occurred while trying to read the directory contents. Please try loading the directory again.");
+            } finally {
+                populateLayoutsDropdown();
+            }
         }
 
         async function loadRecentDirectories() {
@@ -1767,14 +1946,22 @@
                     a.title = dir.name;
                     a.addEventListener('click', async (e) => {
                         e.preventDefault();
+                        // --- Validate handle before use ---
+                        if (!dir.handle || typeof dir.handle.queryPermission !== 'function') {
+                            alert('This directory reference is stale. Please re-select it using "Load Directory".');
+                            await removeDirectory(dir.name);
+                            return;
+                        }
+
                         try {
                             const hasPermission = await dir.handle.queryPermission({ mode: 'read' }) === 'granted' ||
                                                   await dir.handle.requestPermission({ mode: 'read' }) === 'granted';
                             if (hasPermission) {
                                 await processDirectory(dir.handle);
+                                document.getElementById('cog-dropdown').style.display = 'none'; // Close menu after loading
                             }
                         } catch(e) {
-                            alert('Could not access directory. It may have been moved or deleted.');
+                            alert('Could not access directory. It may have been moved, deleted, or permissions were denied.');
                             await removeDirectory(dir.name);
                         }
                     });
@@ -1797,7 +1984,9 @@
         }
 
         async function renderEditMode() {
-            thumbnailContainer.innerHTML = ''; // Clear container
+            thumbnailContainer.innerHTML = ''; // Clear container for a clean slate
+            document.getElementById('landscape-buttons').style.display = 'flex'; // Ensure buttons are visible
+
             const editDirHandle = await currentDirHandle.getDirectoryHandle('Edit Thumbnails');
             let landscapeFiles = [];
             for await (const entry of editDirHandle.values()) {
@@ -1836,7 +2025,8 @@
                         'landscape': landscapeSelections,
                         'landscape-rotate': landscapeRotateSelections,
                         'delete': deleteSelections,
-                        'edit': editSelections
+                        'edit': editSelections,
+                        'play': playSelections
                     };
 
                     if (!landscapeSelectionMode) {
@@ -1862,6 +2052,8 @@
                     rowDiv.classList.toggle('selected-landscape-rotate', landscapeRotateSelections.has(videoName));
                     rowDiv.classList.toggle('selected-delete', deleteSelections.has(videoName));
                     rowDiv.classList.toggle('selected-edit', editSelections.has(videoName));
+                    rowDiv.classList.toggle('selected-play', playSelections.has(videoName));
+                    updatePlayButtonState();
                 });
 
                  // Re-apply selection classes on initial render
@@ -1869,6 +2061,7 @@
                 if (landscapeRotateSelections.has(videoName)) rowDiv.classList.add('selected-landscape-rotate');
                 if (deleteSelections.has(videoName)) rowDiv.classList.add('selected-delete');
                 if (editSelections.has(videoName)) rowDiv.classList.add('selected-edit');
+                if (playSelections.has(videoName)) rowDiv.classList.add('selected-play');
 
                 const imageLoadPromises = files.map(file => {
                     return new Promise((resolve, reject) => {
@@ -1958,7 +2151,7 @@
                         'for /l %%i in (1, 1, 10) do (',
                         '    set /a "timestamp = (%%i - 1) * !interval!"',
                         `    echo   - Generating thumbnail %%i for "${fileName}" at !timestamp!s...`,
-                        `    ffmpeg -ss !timestamp! -i "${fileName}" -vframes 1 -y "Edit Thumbnails\\${baseName}_%%i.jpg"`,
+                        `    ffmpeg -ss !timestamp! -i "${fileName}" -vframes 1 -vf "scale=256:256:force_original_aspect_ratio=decrease" -y "Edit Thumbnails\\${baseName}_%%i.jpg"`,
                         ')'
                     ];
                 }),
@@ -1972,90 +2165,99 @@
             document.getElementById('download-edit-script-link').href = URL.createObjectURL(blob);
         }
 
+        window.onload = init;
+
         function generateFinalBatchScript() {
             const scriptLines = [
-                '@echo off',
-                'cd /d "%~dp0"',
-                'echo Creating output directories...',
-                'if not exist "Landscape" mkdir "Landscape"',
-                'if not exist "Landscape Rotate" mkdir "Landscape Rotate"',
-                'if not exist "Edit" mkdir "Edit"',
+                '# PowerShell Script to process video selections',
+                'Write-Host "Creating output directories..."',
+                'if (-not (Test-Path -LiteralPath "Landscape")) { New-Item -ItemType Directory -Path "Landscape" }',
+                'if (-not (Test-Path -LiteralPath "Landscape\\Thumbnails")) { New-Item -ItemType Directory -Path "Landscape\\Thumbnails" }',
+                'if (-not (Test-Path -LiteralPath "Landscape Rotate")) { New-Item -ItemType Directory -Path "Landscape Rotate" }',
+                'if (-not (Test-Path -LiteralPath "Landscape Rotate\\Thumbnails")) { New-Item -ItemType Directory -Path "Landscape Rotate\\Thumbnails" }',
+                'if (-not (Test-Path -LiteralPath "Edit")) { New-Item -ItemType Directory -Path "Edit" }',
+                'if (-not (Test-Path -LiteralPath "Edit\\Thumbnails")) { New-Item -ItemType Directory -Path "Edit\\Thumbnails" }',
                 ''
             ];
 
-            const processRenaming = (videoName) => {
+            const escapeString = (str) => `'${str.replace(/'/g, "''")}'`;
+
+            const processRenamingAndThumbnails = (videoName, action, destination = '') => {
                 const wrapper = Array.from(document.querySelectorAll('.thumbnail-wrapper')).find(w => {
                     const nameDiv = w.querySelector('.thumbnail-name');
                     return nameDiv && nameDiv.dataset.originalFilename.startsWith(videoName);
                 });
+                
+                let originalVideoFile = allVideoFiles.find(f => f.name.startsWith(videoName));
+                if (!originalVideoFile) return;
+
+                let currentVideoName = originalVideoFile.name;
+                const originalThumbName = originalVideoFile.name.replace(/\.[^/.]+$/, ".jpg");
 
                 if (wrapper) {
                     const nameDiv = wrapper.querySelector('.thumbnail-name');
                     const img = wrapper.querySelector('.thumbnail');
-                    const originalFilename = nameDiv.dataset.originalFilename;
-                    const currentFilename = img.dataset.fileName;
+                    const originalFilenameAttr = nameDiv.dataset.originalFilename;
+                    const currentFilenameAttr = img.dataset.fileName;
 
-                    if (originalFilename !== currentFilename) {
-                        const originalVideo = allVideoFiles.find(f => f.name === originalFilename.replace(/\.jpg$/, '.mp4'));
-                        if (originalVideo) {
-                             const newVideoName = currentFilename.replace(/\.jpg$/, '.mp4');
-                             scriptLines.push(`ren "${originalVideo.name}" "${newVideoName}"`);
-                             return newVideoName; // Return the new name for subsequent commands
-                        }
+                    if (originalFilenameAttr !== currentFilenameAttr) {
+                        const newVideoName = currentFilenameAttr.replace(/\.jpg$/, '.mp4');
+                        scriptLines.push(`Rename-Item -LiteralPath ${escapeString(currentVideoName)} -NewName ${escapeString(newVideoName)}`);
+                        currentVideoName = newVideoName;
                     }
                 }
-                const videoFile = allVideoFiles.find(f => f.name.startsWith(videoName));
-                return videoFile ? videoFile.name : null;
+                
+                const currentThumbName = currentVideoName.replace(/\.[^/.]+$/, ".jpg");
+
+                switch (action) {
+                    case 'move':
+                        scriptLines.push(`Move-Item -LiteralPath ${escapeString(currentVideoName)} -Destination ${escapeString(destination)}`);
+                        scriptLines.push(`if (Test-Path -LiteralPath "Thumbnails\\${originalThumbName}") { Move-Item -LiteralPath "Thumbnails\\${originalThumbName}" -Destination "${destination}\\Thumbnails\\${currentThumbName}" }`);
+                        break;
+                    case 'rotate':
+                        scriptLines.push(`ffmpeg -i ${escapeString(currentVideoName)} -vf "transpose=1" ${escapeString(destination + '\\' + currentVideoName)}`);
+                        scriptLines.push(`Remove-Item -LiteralPath ${escapeString(currentVideoName)}`); // Sends to Recycle Bin
+                        scriptLines.push(`if (Test-Path -LiteralPath "Thumbnails\\${originalThumbName}") { Move-Item -LiteralPath "Thumbnails\\${originalThumbName}" -Destination "${destination}\\Thumbnails\\${currentThumbName}" }`);
+                        break;
+                    case 'delete':
+                        scriptLines.push(`Remove-Item -LiteralPath ${escapeString(currentVideoName)}`); // Sends to Recycle Bin
+                        scriptLines.push(`if (Test-Path -LiteralPath "Thumbnails\\${originalThumbName}") { Remove-Item -LiteralPath "Thumbnails\\${originalThumbName}" }`);
+                        break;
+                }
             };
 
             if (landscapeSelections.size > 0) {
-                scriptLines.push('echo Moving landscape files...');
-                landscapeSelections.forEach(videoName => {
-                    const finalVideoName = processRenaming(videoName);
-                    if (finalVideoName) {
-                        scriptLines.push(`move /Y "${finalVideoName}" "Landscape\\"`);
-                    }
-                });
+                scriptLines.push('Write-Host "Moving landscape files..."');
+                landscapeSelections.forEach(videoName => processRenamingAndThumbnails(videoName, 'move', 'Landscape'));
                 scriptLines.push('');
             }
 
             if (landscapeRotateSelections.size > 0) {
-                scriptLines.push('echo Processing landscape rotate files...');
-                landscapeRotateSelections.forEach(videoName => {
-                    const finalVideoName = processRenaming(videoName);
-                    if (finalVideoName) {
-                        scriptLines.push(`ffmpeg -i "${finalVideoName}" -vf "transpose=1" "Landscape Rotate\\${finalVideoName}"`);
-                        scriptLines.push(`del "${finalVideoName}"`);
-                    }
-                });
+                scriptLines.push('Write-Host "Processing landscape rotate files..."');
+                landscapeRotateSelections.forEach(videoName => processRenamingAndThumbnails(videoName, 'rotate', 'Landscape Rotate'));
                 scriptLines.push('');
             }
 
             if (deleteSelections.size > 0) {
-                scriptLines.push('echo Deleting selected files...');
-                deleteSelections.forEach(videoName => {
-                    const finalVideoName = processRenaming(videoName);
-                     if (finalVideoName) {
-                        scriptLines.push(`del "${finalVideoName}"`);
-                    }
-                });
+                scriptLines.push('Write-Host "Deleting selected files (to Recycle Bin)..."');
+                deleteSelections.forEach(videoName => processRenamingAndThumbnails(videoName, 'delete'));
                 scriptLines.push('');
             }
 
             if (editSelections.size > 0) {
-                scriptLines.push('echo Moving files to Edit folder...');
-                editSelections.forEach(videoName => {
-                    const finalVideoName = processRenaming(videoName);
-                    if (finalVideoName) {
-                        scriptLines.push(`move /Y "${finalVideoName}" "Edit\\"`);
-                    }
-                });
+                scriptLines.push('Write-Host "Moving files to Edit folder..."');
+                editSelections.forEach(videoName => processRenamingAndThumbnails(videoName, 'move', 'Edit'));
                 scriptLines.push('');
             }
             
-            scriptLines.push('echo.');
-            scriptLines.push('echo Processing complete.');
-            scriptLines.push('pause');
+            scriptLines.push('Write-Host "Cleaning up..."');
+            scriptLines.push('if (Test-Path -LiteralPath "Edit Thumbnails") {');
+            scriptLines.push('    Remove-Item -Recurse -Force -LiteralPath "Edit Thumbnails"');
+            scriptLines.push('}');
+            scriptLines.push('');
+            
+            scriptLines.push('Write-Host "Processing complete."');
+            scriptLines.push('Read-Host -Prompt "Press Enter to exit"');
 
             const script = scriptLines.join('\r\n');
             document.getElementById('final-landscape-batch-script').value = script;
@@ -2073,7 +2275,16 @@
             scriptTextArea.select();
             navigator.clipboard.writeText(scriptTextArea.value).then(() => {
                 alert('Script copied to clipboard!');
+                document.getElementById('reload-final-script-page-btn').style.display = 'inline-block';
             });
+        });
+
+        document.getElementById('download-final-landscape-script-link').addEventListener('click', () => {
+            document.getElementById('reload-final-script-page-btn').style.display = 'inline-block';
+        });
+
+        document.getElementById('reload-final-script-page-btn').addEventListener('click', () => {
+            location.reload();
         });
 
         function generateBatchScript(videoFiles, dirName) {
@@ -2086,7 +2297,7 @@
                 ...videoFiles.map(file => {
                     const fileName = file.name;
                     const thumbnailName = fileName.substring(0, fileName.lastIndexOf('.')) + '.jpg';
-                    return `ffmpeg -i "${fileName}" -ss 00:00:02.000 -vframes 1 -vf "scale=256:256:force_original_aspect_ratio=decrease" "Thumbnails\\${thumbnailName}"`;
+                    return `ffmpeg -y -i "${fileName}" -ss 00:00:02.000 -frames:v 1 -vf "scale=256:256:force_original_aspect_ratio=decrease" "Thumbnails\\${thumbnailName}"`;
                 }),
                 'echo.',
                 'echo Thumbnail generation complete.',
@@ -2622,6 +2833,8 @@
 
         function makeDraggable(element) {
             let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+            let isDragging = false;
+            let mouseDownEvent = null;
 
             element.addEventListener('dragstart', (e) => e.preventDefault());
             element.onmousedown = dragMouseDown;
@@ -2629,6 +2842,8 @@
             function dragMouseDown(e) {
                 e = e || window.event;
                 e.preventDefault();
+                isDragging = false;
+                mouseDownEvent = e;
 
                 pos3 = e.clientX;
                 pos4 = e.clientY;
@@ -2650,6 +2865,7 @@
             }
 
             function elementDrag(e) {
+                isDragging = true;
                 e = e || window.event;
                 e.preventDefault();
 
@@ -2688,6 +2904,26 @@
             }
 
             function closeDragElement() {
+                 if (!isDragging) {
+                    const wrapper = element;
+                    const clickEvent = mouseDownEvent;
+                    if (isMultiSelectMode || clickEvent.ctrlKey || clickEvent.metaKey) {
+                        if (selectedThumbnails.has(wrapper)) {
+                            wrapper.classList.remove('selected');
+                            selectedThumbnails.delete(wrapper);
+                        } else {
+                            wrapper.classList.add('selected');
+                            selectedThumbnails.add(wrapper);
+                        }
+                    } else {
+                        selectedThumbnails.forEach(t => t.classList.remove('selected'));
+                        selectedThumbnails.clear();
+                        wrapper.classList.add('selected');
+                        selectedThumbnails.add(wrapper);
+                    }
+                    updatePlayButtonState();
+                }
+
                 document.onmouseup = null;
                 document.onmousemove = null;
 
@@ -2710,20 +2946,21 @@
         }
 
         function freezeLayout() {
-            const thumbnails = document.querySelectorAll('.thumbnail');
-            const positions = [];
+            const wrappers = thumbnailContainer.querySelectorAll('.thumbnail-wrapper');
+            if (wrappers.length === 0) return;
 
-            thumbnails.forEach(thumb => {
+            const positions = [];
+            wrappers.forEach(wrapper => {
                 positions.push({
-                    left: thumb.offsetLeft,
-                    top: thumb.offsetTop
+                    left: wrapper.offsetLeft,
+                    top: wrapper.offsetTop
                 });
             });
 
-            thumbnails.forEach((thumb, index) => {
-                thumb.style.position = 'absolute';
-                thumb.style.left = positions[index].left + 'px';
-                thumb.style.top = positions[index].top + 'px';
+            wrappers.forEach((wrapper, index) => {
+                wrapper.style.position = 'absolute';
+                wrapper.style.left = positions[index].left + 'px';
+                wrapper.style.top = positions[index].top + 'px';
             });
             
             isLayoutFrozen = true;
@@ -2731,24 +2968,18 @@
         }
 
         function sortThumbnails(sortBy) {
-            const thumbnails = Array.from(document.querySelectorAll('.thumbnail'));
-            isLayoutFrozen = false; // Disable layout freeze for sorting
+            const canvas = canvases.get(activeCanvasId);
+            if (!canvas) return;
+
+            isLayoutFrozen = false; 
             
             if (sortBy === 'name') {
-                thumbnails.sort((a, b) => a.dataset.fileName.localeCompare(b.dataset.fileName));
+                canvas.thumbnails.sort((a, b) => a.dataset.fileName.localeCompare(b.dataset.fileName));
             } else if (sortBy === 'random') {
-                thumbnails.sort(() => Math.random() - 0.5);
+                canvas.thumbnails.sort(() => Math.random() - 0.5);
             }
 
-            // Reset styles and re-append to container
-            thumbnails.forEach(thumb => thumb.remove());
-            thumbnails.forEach(thumb => {
-                thumb.style.position = 'static';
-                thumb.style.left = '';
-                thumb.style.top = '';
-                thumbnailContainer.appendChild(thumb);
-            });
-            updateContentSpacer();
+            renderCanvas(activeCanvasId);
         }
 
         function saveLayout() {
@@ -3037,6 +3268,112 @@
                 sidebar.style.width = newWidth + 'px';
             }
         }
+
+        generateEditThumbnailsNewBtn.addEventListener('click', () => {
+            const trackingFileName = 'processed_videos.txt';
+            const script = [
+                '@echo off',
+                'setlocal enabledelayedexpansion',
+                'cd /d "%~dp0"',
+                'echo Generating edit thumbnails for new files...',
+                `set "trackingFile=${trackingFileName}"`,
+                'if not exist "!trackingFile!" ( echo. > "!trackingFile!" )',
+                '',
+                'for %%F in (*.mp4, *.avi, *.mov, *.mkv) do (',
+                '    set "videoFile=%%F"',
+                '    findstr /x /c:"!videoFile!" "!trackingFile!" >nul',
+                '    if errorlevel 1 (',
+                '        echo Processing new file: !videoFile!',
+                '        set "baseName=%%~nF"',
+                `        for /f "delims=" %%a in ('ffprobe -v error -show_entries format^=duration -of default^=noprint_wrappers^=1:nokey^=1 "!videoFile!"') do (`,
+                '            set "duration_str=%%a"',
+                '        )',
+                '        for /f "delims=." %%a in ("!duration_str!") do set "duration_int=%%a"',
+                '        if !duration_int! equ 0 set "duration_int=10"',
+                '        set /a "interval = !duration_int! / 10"',
+                '        if !interval! equ 0 set "interval=1"',
+                '        for /l %%i in (1, 1, 10) do (',
+                '            set /a "timestamp = (%%i - 1) * !interval!"',
+                `            ffmpeg -ss !timestamp! -i "!videoFile!" -vframes 1 -vf "scale=256:256:force_original_aspect_ratio=decrease" -y "Edit Thumbnails\\!baseName!_%%i.jpg"`,
+                '        )',
+                '        echo !videoFile!>> "!trackingFile!"',
+                '    )',
+                ')',
+                '',
+                'echo Thumbnail generation for new files complete.',
+                'pause'
+            ].join('\r\n');
+
+            editScriptModal.querySelector('h2').textContent = 'Generate Thumbnails for Edit Mode for New Files';
+            document.getElementById('edit-batch-script').value = script;
+            const blob = new Blob([script], { type: 'text/plain;charset=utf-8' });
+            document.getElementById('download-edit-script-link').href = URL.createObjectURL(blob);
+            document.getElementById('download-edit-script-link').download = 'generate_edit_thumbnails_new.bat';
+            editScriptModal.style.display = 'block';
+        });
+
+        generateFolderThumbnailsBtn.addEventListener('click', () => {
+            const script = [
+                '@echo off',
+                'echo This will delete and regenerate all thumbnails in the Thumbnails folder.',
+                'pause',
+                'if exist "Thumbnails" ( rmdir /S /Q "Thumbnails" )',
+                'mkdir "Thumbnails"',
+                ...allVideoFiles.map(file => {
+                    const fileName = file.name;
+                    const thumbnailName = fileName.substring(0, fileName.lastIndexOf('.')) + '.jpg';
+                    return `ffmpeg -y -i "${fileName}" -ss 00:00:02.000 -frames:v 1 -vf "scale=256:256:force_original_aspect_ratio=decrease" "Thumbnails\\${thumbnailName}"`;
+                }),
+                'echo.',
+                'echo Thumbnail regeneration complete.',
+                'pause'
+            ].join('\r\n');
+            
+            batchScriptTextArea.value = script;
+            const blob = new Blob([script], { type: 'text/plain;charset=utf-8' });
+            downloadScriptLink.href = URL.createObjectURL(blob);
+            downloadScriptLink.download = 'generate_folder_thumbnails.bat';
+            scriptModal.style.display = 'block';
+        });
+
+        refreshThumbnailsBtn.addEventListener('click', () => {
+            const script = [
+                '@echo off',
+                'setlocal enabledelayedexpansion',
+                'cd /d "%~dp0"',
+                'echo Refreshing thumbnails...',
+                'set "videoFiles=video_files.tmp"',
+                '> "!videoFiles!" (',
+                ...allVideoFiles.map(file => `    echo ${file.name.substring(0, file.name.lastIndexOf('.'))}`),
+                ')',
+                '',
+                'for %%f in ("Thumbnails\\*.jpg") do (',
+                '    set "thumbName=%%~nf"',
+                '    findstr /x /c:"!thumbName!" "!videoFiles!" >nul',
+                '    if errorlevel 1 (',
+                '        echo Deleting orphaned thumbnail: %%f',
+                '        del "%%f"',
+                '    )',
+                ')',
+                '',
+                'del "!videoFiles!"',
+                '',
+                ...allVideoFiles.map(file => {
+                    const fileName = file.name;
+                    const thumbnailName = fileName.substring(0, fileName.lastIndexOf('.')) + '.jpg';
+                    return `if not exist "Thumbnails\\${thumbnailName}" ffmpeg -y -i "${fileName}" -ss 00:00:02.000 -frames:v 1 -vf "scale=256:256:force_original_aspect_ratio=decrease" "Thumbnails\\${thumbnailName}"`;
+                }),
+                'echo.',
+                'echo Thumbnail refresh complete.',
+                'pause'
+            ].join('\r\n');
+
+            batchScriptTextArea.value = script;
+            const blob = new Blob([script], { type: 'text/plain;charset=utf-8' });
+            downloadScriptLink.href = URL.createObjectURL(blob);
+            downloadScriptLink.download = 'refresh_thumbnails.bat';
+            scriptModal.style.display = 'block';
+        });
     </script>
 </body>
 </html>
