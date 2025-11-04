@@ -36,6 +36,27 @@
             cursor: col-resize;
             z-index: 100;
         }
+        .right-sidebar {
+            width: 250px;
+            padding: 10px;
+            border-left: 1px solid #444444;
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+            position: relative;
+            background-color: #f0f0f0;
+            color: black;
+            overflow-y: auto;
+        }
+        #right-sidebar-resizer {
+            position: absolute;
+            top: 0;
+            left: -5px;
+            width: 10px;
+            height: 100%;
+            cursor: col-resize;
+            z-index: 100;
+        }
         #sidebar-scroll-container {
             flex-grow: 1;
             overflow-y: auto;
@@ -111,7 +132,7 @@
             flex-grow: 1;
             display: flex;
             flex-direction: column;
-            position: relative; /* New positioning context */
+            overflow: hidden; /* Prevent the main content from causing page scroll */
         }
         .top-bar {
             padding: 10px 20px 10px 0px;
@@ -133,6 +154,9 @@
             color: white;
             justify-content: space-between;
         }
+        #bottom-bar-info {
+            /* Styles removed to allow text to wrap */
+        }
         .top-bar label {
             margin-right: 10px; /* Add padding between label and dropdown */
         }
@@ -141,6 +165,7 @@
             padding: 20px;
             position: relative;
             overflow: auto;
+            min-width: 0;
         }
         #thumbnail-container.list-view-active {
             padding-top: 40px;
@@ -178,12 +203,13 @@
             display: block;
             font-size: 14px;
             color: black;
-            flex: 3 1 0%;
+            width: 400px; /* Fixed width */
+            min-width: 400px; /* Prevent shrinking */
+            max-width: 400px; /* Prevent growing */
             text-align: left;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
-            min-width: 0;
         }
         .new-filename-placeholder, .canvas-name-placeholder {
             display: none;
@@ -283,6 +309,9 @@
             pointer-events: none;
             display: none;
             z-index: 2147483647;
+        }
+        #filename-builder-modal {
+            z-index: 2500;
         }
         .landscape-row.selected-landscape {
             outline: 3px dashed blue;
@@ -680,6 +709,21 @@
             display: block;
             color: black;
         }
+        .list-view-toggle-btn {
+            height: 36px;
+            padding: 0 12px;
+            border: 1px solid #444444;
+            border-left: none;
+            background-color: #1877f2;
+            color: #ffffff;
+            border-radius: 0;
+            font-size: 14px;
+            box-sizing: border-box;
+            cursor: pointer;
+        }
+        .list-view-toggle-btn.active {
+            background-color: #d93025;
+        }
     </style>
 </head>
 <body>
@@ -784,25 +828,52 @@
                     <option value="" disabled hidden>Send to...</option>
                 </select>
                 <button id="close-canvas-btn" disabled>Close Canvas</button>
+                <button id="toggle-last-canvas-btn" style="display: none;">Toggle Last</button>
                 <button id="play-btn" disabled>Play</button>
+                <button id="preview-btn">Preview</button>
             </div>
-            <div id="list-view-controls" style="display: none;">
-                <button id="list-view-cog-btn">⚙</button>
-                <div id="list-view-dropdown">
-                    <label><input type="checkbox" id="show-thumbnails-checkbox"> Show Thumbnails</label>
-                    <label><input type="checkbox" id="show-canvas-name-checkbox"> Show Canvas Name</label>
-                    <label><input type="checkbox" id="show-new-filename-checkbox"> Show New Filename</label>
+            <div id="content-area" style="display: flex; flex-grow: 1; overflow: hidden;">
+                <div id="thumbnail-container">
+                    <div id="selection-box"></div>
+                    <div id="content-spacer" style="position: absolute; top: 0; left: 0; z-index: -1;"></div>
+                </div>
+                <div class="right-sidebar" id="right-sidebar" style="display: none;">
+                    <div id="right-sidebar-resizer"></div>
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <h3>Preview</h3>
+                        <select id="preview-size-selector">
+                            <option value="list">List</option>
+                            <option value="0.2">20%</option>
+                            <option value="0.3">30%</option>
+                            <option value="0.4">40%</option>
+                            <option value="0.5" selected>50%</option>
+                            <option value="0.6">60%</option>
+                            <option value="0.7">70%</option>
+                            <option value="0.8">80%</option>
+                            <option value="0.9">90%</option>
+                            <option value="1">100%</option>
+                        </select>
+                    </div>
+                    <div id="preview-container"></div>
                 </div>
             </div>
-            <div id="thumbnail-container">
-                <div id="selection-box"></div>
-                <div id="content-spacer" style="position: absolute; top: 0; left: 0; z-index: -1;"></div>
-            </div>
             <div class="bottom-bar">
-                <div style="display: flex;">
+                <div style="display: flex;" id="bottom-bar-left-controls">
                     <button id="new-filename-btn" style="height: 36px; padding: 0; width: 60px; text-align: center; border: 1px solid #444444; background-color: #1877f2; color: #ffffff; border-radius: 0; font-size: 14px; box-sizing: border-box; cursor: pointer;">New</button>
                     <button id="remove-btn" style="height: 36px; padding: 0 12px; border: 1px solid #444444; border-left: none; background-color: #1877f2; color: #ffffff; border-radius: 0; font-size: 14px; box-sizing: border-box; cursor: pointer;">Remove</button>
+                    <button id="edit-button-btn" style="height: 36px; padding: 0 12px; border: 1px solid #444444; border-left: none; background-color: #1877f2; color: #ffffff; border-radius: 0; font-size: 14px; box-sizing: border-box; cursor: pointer;" disabled>Edit</button>
+                    <button id="clone-button-btn" style="height: 36px; padding: 0 12px; border: 1px solid #444444; border-left: none; background-color: #1877f2; color: #ffffff; border-radius: 0; font-size: 14px; box-sizing: border-box; cursor: pointer;" disabled>Clone</button>
                     <button id="rename-btn" style="height: 36px; padding: 0 12px; border: 1px solid #444444; border-left: none; background-color: #1877f2; color: #ffffff; border-radius: 0; font-size: 14px; box-sizing: border-box; cursor: pointer;" disabled>Rename</button>
+                    <button id="toggle-renamed-canvas-btn" style="height: 36px; padding: 0 12px; border: 1px solid #444444; border-left: none; background-color: #1877f2; color: #ffffff; border-radius: 0; font-size: 14px; box-sizing: border-box; cursor: pointer; display: none;">Toggle Renamed</button>
+                    <div id="writing-element-controls" style="display: flex; align-items: center; border: 1px solid #444; border-left: none; padding: 0 5px;">
+                        <input type="checkbox" id="add-writing-element-checkbox" title="Add Writing element">
+                        <input type="number" id="writing-element-number-input" value="1" style="width: 40px; height: 24px; text-align: center; background-color: #ffffff; color: black; border: 1px solid #444;">
+                    </div>
+                    <div id="list-view-button-controls" style="display: none;">
+                        <button id="show-thumbnails-btn" class="list-view-toggle-btn">Show Thumbs</button>
+                        <button id="show-canvas-name-btn" class="list-view-toggle-btn">Show Canvas</button>
+                        <button id="show-new-filename-btn" class="list-view-toggle-btn">Show New Name</button>
+                    </div>
                 </div>
                 <div id="bottom-bar-info" style="flex-grow: 1; text-align: right;"></div>
                 <div id="landscape-buttons" style="display: none;">
@@ -837,7 +908,11 @@
                 <button id="add-element-btn">+</button>
             </div>
 
-            <button id="create-filename-button-btn">Add Button</button>
+            <div style="display: flex; justify-content: space-between; margin-top: 20px;">
+                <button id="create-filename-button-btn">Add Button</button>
+                <button id="clone-filename-button-btn" style="display: none;">Clone Button</button>
+            </div>
+            <input type="hidden" id="editing-button-id">
         </div>
     </div>
 
@@ -917,6 +992,19 @@
         </div>
     </div>
 
+    <div id="orphaned-thumbnails-modal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>Orphaned Thumbnails Found</h2>
+            <p id="orphaned-thumbnails-message"></p>
+            <div id="orphaned-files-list" style="max-height: 150px; overflow-y: auto; background-color: #f0f0f0; border: 1px solid #ccc; padding: 5px; margin-bottom: 10px; color: black;"></div>
+            <button id="delete-orphans-script-btn">Generate Deletion Script</button>
+            <button id="hide-orphans-btn">Hide Them</button>
+            <button id="hide-forever-orphans-btn">Hide Forever</button>
+            <button id="do-nothing-orphans-btn">Do Nothing</button>
+        </div>
+    </div>
+
     <script>
         // --- IndexedDB Helpers ---
         function getDb(key) {
@@ -967,7 +1055,13 @@
                 collapseState: {},
                 buttonVisibility: {},
                 canvases: null,
-                layouts: {}
+                layouts: {},
+                previewSidebarVisible: false,
+                previewSidebarWidth: 250,
+                previewThumbnailSize: '0.5',
+                addWritingElement: false,
+                writingElementNumber: 1,
+                hiddenOrphans: []
             };
 
             if (rawData) {
@@ -1037,12 +1131,13 @@
         const generateEditThumbnailsNewBtn = document.getElementById('generate-edit-thumbnails-new-btn');
         const editScriptModal = document.getElementById('edit-script-modal');
         const recentDirectoriesDropdown = document.getElementById('recent-directories-dropdown');
-        const listViewControls = document.getElementById('list-view-controls');
-        const listViewCogBtn = document.getElementById('list-view-cog-btn');
-        const listViewDropdown = document.getElementById('list-view-dropdown');
-        const showThumbnailsCheckbox = document.getElementById('show-thumbnails-checkbox');
-        const showCanvasNameCheckbox = document.getElementById('show-canvas-name-checkbox');
-        const showNewFilenameCheckbox = document.getElementById('show-new-filename-checkbox');
+        const listViewButtonControls = document.getElementById('list-view-button-controls');
+        const showThumbnailsBtn = document.getElementById('show-thumbnails-btn');
+        const showCanvasNameBtn = document.getElementById('show-canvas-name-btn');
+        const showNewFilenameBtn = document.getElementById('show-new-filename-btn');
+        const previewBtn = document.getElementById('preview-btn');
+        const rightSidebar = document.getElementById('right-sidebar');
+        const previewContainer = document.getElementById('preview-container');
         
         let buttonsForRemoval = new Set();
         let filenameParts = [];
@@ -1053,6 +1148,8 @@
 
         var canvases = new Map();
         let activeCanvasId = 1;
+        let lastActiveCanvasId = null;
+        let lastCanvasIdBeforeRenamed = null;
         let allThumbnails = [];
         let currentDirHandle;
         let landscapeSelectionMode = ''; // 'landscape' or 'landscape-rotate'
@@ -1063,14 +1160,18 @@
         const editSelections = new Set();
         const playSelections = new Set();
 
-        function updateRemoveButtonState() {
-            if (buttonsForRemoval.size === 0) {
-                removeBtn.classList.add('disabled-btn');
-                removeBtn.disabled = true;
-            } else {
-                removeBtn.classList.remove('disabled-btn');
-                removeBtn.disabled = false;
-            }
+        function updateSidebarActionButtonsState() {
+            const numSelected = buttonsForRemoval.size;
+            const editBtn = document.getElementById('edit-button-btn');
+            const cloneBtn = document.getElementById('clone-button-btn');
+
+            // Remove button state
+            removeBtn.disabled = numSelected === 0;
+            removeBtn.classList.toggle('disabled-btn', numSelected === 0);
+
+            // Edit and Clone button state
+            editBtn.disabled = numSelected !== 1;
+            cloneBtn.disabled = numSelected !== 1;
         }
 
         function getNextCanvasId() {
@@ -1103,10 +1204,21 @@
             const currentCanvas = canvases.get(activeCanvasId);
             closeCanvasBtn.disabled = !(currentCanvas && currentCanvas.thumbnails.length === 0 && canvases.size > 1 && currentCanvas.name !== 'Renamed');
             
+            const toggleRenamedBtn = document.getElementById('toggle-renamed-canvas-btn');
+            const renamedCanvas = Array.from(canvases.values()).find(c => c.name === 'Renamed');
+            if (renamedCanvas) {
+                toggleRenamedBtn.style.display = 'inline-block';
+            } else {
+                toggleRenamedBtn.style.display = 'none';
+            }
+
             populateCanvasDropdown();
             
+            const currentSettings = currentCanvas ? (currentCanvas.settings || { thumbnailSize: '1' }) : { thumbnailSize: '1' };
+            sizeSelector.value = currentSettings.thumbnailSize;
+
             const currentSize = sizeSelector.value;
-            listViewControls.style.display = currentSize === 'list' ? 'block' : 'none';
+            listViewButtonControls.style.display = currentSize === 'list' ? 'flex' : 'none';
             if (currentSize === 'list') {
                 layoutThumbnailsInList();
             } else {
@@ -1145,12 +1257,17 @@
                 canvases: Array.from(canvases.values()).map(c => ({
                     id: c.id,
                     name: c.name,
-                    thumbnails: c.thumbnails.map(t => ({
-                        fileName: t.dataset.fileName,
-                        left: t.style.left,
-                        top: t.style.top,
-                        previousCanvasId: t.dataset.previousCanvasId
-                    }))
+                    settings: c.settings || { thumbnailSize: '1' }, // Save settings per canvas
+                    thumbnails: c.thumbnails.map(t => {
+                        const nameDiv = t.querySelector('.thumbnail-name');
+                        return {
+                            fileName: t.dataset.fileName, // The current (potentially new) name
+                            originalFilename: nameDiv ? nameDiv.dataset.originalFilename : t.dataset.fileName,
+                            left: t.style.left,
+                            top: t.style.top,
+                            previousCanvasId: t.dataset.previousCanvasId
+                        };
+                    })
                 })),
                 activeCanvasId: activeCanvasId
             };
@@ -1166,12 +1283,14 @@
             
             currentPlaylistIndex = index;
             const thumbWrapper = playlist[index];
-            const fileName = thumbWrapper.dataset.fileName || thumbWrapper.querySelector('.thumbnail').dataset.fileName;
-            if (!fileName) {
-                console.error("Could not find a filename for the selected thumbnail.", thumbWrapper);
-                return; // or handle the error appropriately
+            const nameDiv = thumbWrapper.querySelector('.thumbnail-name');
+            const originalFilename = nameDiv ? nameDiv.dataset.originalFilename : thumbWrapper.dataset.fileName;
+
+            if (!originalFilename) {
+                console.error("Could not find an original filename for the selected thumbnail.", thumbWrapper);
+                return;
             }
-            const thumbName = fileName.substring(0, fileName.lastIndexOf('.'));
+            const thumbName = originalFilename.substring(0, originalFilename.lastIndexOf('.'));
 
             // Find the video file by matching the base name, ignoring the extension
             const videoFile = allVideoFiles.find(f => f.name.substring(0, f.name.lastIndexOf('.')) === thumbName);
@@ -1183,7 +1302,7 @@
             } else {
                 console.error(`Video file not found for thumbnail: ${thumbName}`);
                 console.log('Available video files:', allVideoFiles.map(f => f.name));
-                alert(`Could not find the video file for ${fileName}. Check the console for more details.`);
+                alert(`Could not find the video file for ${originalFilename}. Check the console for more details.`);
             }
 
             videoPrevBtn.style.display = index > 0 ? 'block' : 'none';
@@ -1202,15 +1321,17 @@
                 hideBtn.disabled = true;
                 renameBtn.disabled = true; // Disable in edit mode
             } else {
-                const numSelected = selectedThumbnails.size;
-                playBtn.disabled = numSelected === 0;
-                splitBtn.disabled = numSelected === 0;
-                sendToCanvasSelect.disabled = numSelected === 0;
-                hideBtn.disabled = numSelected === 0;
+                const numThumbSelected = selectedThumbnails.size;
+                const numButtonSelected = buttonsForRemoval.size;
+
+                playBtn.disabled = numThumbSelected === 0 && numButtonSelected !== 1;
+                splitBtn.disabled = numThumbSelected === 0;
+                sendToCanvasSelect.disabled = numThumbSelected === 0;
+                hideBtn.disabled = numThumbSelected === 0;
 
                 const currentCanvas = canvases.get(activeCanvasId);
                 const isRenamedCanvas = currentCanvas && currentCanvas.name === 'Renamed';
-                renameBtn.disabled = numSelected === 0 || isRenamedCanvas;
+                renameBtn.disabled = numThumbSelected === 0 || isRenamedCanvas;
             }
         }
 
@@ -1238,39 +1359,47 @@
         }
 
         async function init() {
-            const dirHandle = await getDb('lastDirectory');
-            if (dirHandle && typeof dirHandle.queryPermission === 'function') {
-                try {
-                    const hasPermission = await dirHandle.queryPermission({ mode: 'read' }) === 'granted' ||
-                                          await dirHandle.requestPermission({ mode: 'read' }) === 'granted';
-                    if (hasPermission) {
+            let directoryLoaded = false;
+            try {
+                const dirHandle = await getDb('lastDirectory');
+                if (dirHandle && typeof dirHandle.queryPermission === 'function') {
+                    // Only check for existing permission; don't request it on page load.
+                    if (await dirHandle.queryPermission({ mode: 'read' }) === 'granted') {
                         await processDirectory(dirHandle);
+                        directoryLoaded = true;
                     } else {
-                         console.error('Permission to access the last directory was denied.');
-                         await setDb('lastDirectory', null);
+                        console.log('Permission for last directory not granted. Waiting for user action.');
                     }
-                } catch (err) {
-                    console.error('Could not auto-load directory:', err);
-                    await setDb('lastDirectory', null);
                 }
-            } else if (dirHandle) {
-                console.warn('Last directory handle from IndexedDB was invalid. Clearing.');
-                await setDb('lastDirectory', null);
-            }
-            
-            // Fallback initialization for when no directory is auto-loaded
-            if (!currentDirHandle) {
-                initializeUI();
+            } catch (e) {
+                console.error('Error during auto-load:', e);
+            } finally {
+                // If no directory was loaded (either due to no handle, no permission, or error),
+                // initialize a clean UI.
+                if (!directoryLoaded) {
+                    initializeUI();
+                }
             }
         }
 
         function initializeUI() {
             const projectData = loadProjectData(directoryName);
-            const savedSize = projectData.thumbnailSize || '1';
-            sizeSelector.value = savedSize;
-            listViewControls.style.display = savedSize === 'list' ? 'block' : 'none';
             loadRecentDirectories();
-            updateRemoveButtonState();
+            updateSidebarActionButtonsState();
+
+            document.getElementById('edit-button-btn').addEventListener('click', () => {
+                if (buttonsForRemoval.size === 1) {
+                    const buttonId = buttonsForRemoval.values().next().value;
+                    openButtonEditor(buttonId);
+                }
+            });
+
+            document.getElementById('clone-button-btn').addEventListener('click', () => {
+                if (buttonsForRemoval.size === 1) {
+                    const buttonId = buttonsForRemoval.values().next().value;
+                    cloneSelectedButton(buttonId);
+                }
+            });
 
             recentDirectoriesDropdown.addEventListener('click', (event) => {
                 event.stopPropagation();
@@ -1316,6 +1445,24 @@
                 saveProjectData(directoryName, projectData);
                 isLayoutFrozen = false;
                 layoutThumbnailsInGrid();
+            });
+
+            const addWritingElementCheckbox = document.getElementById('add-writing-element-checkbox');
+            const writingElementNumberInput = document.getElementById('writing-element-number-input');
+
+            addWritingElementCheckbox.checked = projectData.addWritingElement;
+            writingElementNumberInput.value = projectData.writingElementNumber;
+
+            addWritingElementCheckbox.addEventListener('change', () => {
+                const projectData = loadProjectData(directoryName);
+                projectData.addWritingElement = addWritingElementCheckbox.checked;
+                saveProjectData(directoryName, projectData);
+            });
+
+            writingElementNumberInput.addEventListener('change', () => {
+                const projectData = loadProjectData(directoryName);
+                projectData.writingElementNumber = writingElementNumberInput.value;
+                saveProjectData(directoryName, projectData);
             });
         }
 
@@ -1594,6 +1741,7 @@
             const category = lastClickedButtonData.path[0];
             const prefix = `[${username}]_${category}`;
             const buttonText = lastClickedButtonData.fullButtonText;
+            const startingNumbers = new Map();
 
             selectedArray.forEach((thumb) => {
                 const originalThumbName = thumb.querySelector('.thumbnail-name').dataset.originalFilename;
@@ -1601,6 +1749,14 @@
                 const videoFile = allVideoFiles.find(f => f.name === originalVideoName);
 
                 let suffix = '';
+                let writingElement = '';
+
+                const addWritingElement = document.getElementById('add-writing-element-checkbox').checked;
+                if (addWritingElement) {
+                    const writingNumber = document.getElementById('writing-element-number-input').value;
+                    writingElement = ` (Writing ${writingNumber})`;
+                }
+
                 if (videoFile && videoFile.customPath === 'Landscape') {
                     suffix = ' (Landscape)';
                 } else if (videoFile && videoFile.customPath === 'Landscape Rotate') {
@@ -1609,12 +1765,16 @@
 
                 let baseName;
                 if (lastClickedButtonData.specialType === 'plusOne') {
-                    baseName = `${prefix}${suffix}`;
+                    baseName = `${prefix}${writingElement}${suffix}`;
                 } else {
-                    baseName = `${prefix} ${buttonText}${suffix}`;
+                    baseName = `${prefix} ${buttonText}${writingElement}${suffix}`;
                 }
 
-                const nextNumber = findAndRenumberSequence(baseName, false);
+                if (!startingNumbers.has(baseName)) {
+                    startingNumbers.set(baseName, findAndRenumberSequence(baseName, false));
+                }
+                
+                const nextNumber = startingNumbers.get(baseName);
                 const extension = originalThumbName.substring(originalThumbName.lastIndexOf('.'));
                 const newFilename = `${baseName} (${nextNumber})${extension.replace(/\.mp4$/i, '.jpg')}`;
 
@@ -1628,6 +1788,8 @@
                 thumb.querySelector('.thumbnail').dataset.fileName = newFilename;
                 thumb.querySelector('.thumbnail-name').textContent = newFilename;
                 thumb.querySelector('.new-filename-placeholder').textContent = newFilename;
+
+                startingNumbers.set(baseName, nextNumber + 1);
             });
 
             sendThumbnailsToCanvas(renamedCanvas.id, false);
@@ -1638,7 +1800,8 @@
             delete renameBtn.dataset.lastClicked;
             document.querySelectorAll('#sidebar-scroll-container button.selected-for-removal').forEach(b => b.classList.remove('selected-for-removal'));
             buttonsForRemoval.clear();
-            updateRemoveButtonState();
+            updateSidebarActionButtonsState();
+            updatePreviewPanel(); // Refresh the preview panel
         });
 
         removeAllButtonsBtn.addEventListener('click', () => {
@@ -1785,6 +1948,7 @@
             selectedThumbnails.forEach(thumb => thumb.classList.remove('selected'));
             selectedThumbnails.clear();
             updatePlayButtonState();
+            updateBottomBarInfo();
         });
 
         hideBtn.addEventListener('click', () => {
@@ -1792,7 +1956,7 @@
                 let hiddenCanvas = Array.from(canvases.values()).find(c => c.name === 'Hidden');
                 if (!hiddenCanvas) {
                     const newCanvasId = getNextCanvasId();
-                    hiddenCanvas = { id: newCanvasId, name: 'Hidden', thumbnails: [] };
+                    hiddenCanvas = { id: newCanvasId, name: 'Hidden', thumbnails: [], settings: { thumbnailSize: '1' } };
                     canvases.set(newCanvasId, hiddenCanvas);
                 }
 
@@ -1833,7 +1997,7 @@
         deleteLayoutBtn.addEventListener('click', deleteLayout);
         splitBtn.addEventListener('click', () => {
             const newCanvasId = getNextCanvasId();
-            const newCanvas = { id: newCanvasId, name: `Canvas ${newCanvasId}`, thumbnails: [] };
+            const newCanvas = { id: newCanvasId, name: `Canvas ${newCanvasId}`, thumbnails: [], settings: { thumbnailSize: '1' } };
             canvases.set(newCanvasId, newCanvas);
 
             const currentCanvas = canvases.get(activeCanvasId);
@@ -1852,7 +2016,43 @@
             renderCanvas(newCanvasId);
         });
         canvasSelect.addEventListener('change', (e) => {
-            renderCanvas(parseInt(e.target.value));
+            const newCanvasId = parseInt(e.target.value);
+            const renamedCanvas = Array.from(canvases.values()).find(c => c.name === 'Renamed');
+
+            if (newCanvasId !== activeCanvasId) {
+                if (renamedCanvas && newCanvasId === renamedCanvas.id) {
+                    lastCanvasIdBeforeRenamed = activeCanvasId;
+                } else {
+                    lastCanvasIdBeforeRenamed = null; 
+                }
+                lastActiveCanvasId = activeCanvasId;
+                document.getElementById('toggle-last-canvas-btn').style.display = 'inline-block';
+            }
+            renderCanvas(newCanvasId);
+        });
+        
+        document.getElementById('toggle-renamed-canvas-btn').addEventListener('click', () => {
+            const renamedCanvas = Array.from(canvases.values()).find(c => c.name === 'Renamed');
+            if (!renamedCanvas) return;
+
+            if (activeCanvasId === renamedCanvas.id) {
+                // If we are on Renamed, go back to the last one
+                if (lastCanvasIdBeforeRenamed && canvases.has(lastCanvasIdBeforeRenamed)) {
+                    renderCanvas(lastCanvasIdBeforeRenamed);
+                }
+            } else {
+                // If we are not on Renamed, go to it
+                lastCanvasIdBeforeRenamed = activeCanvasId;
+                renderCanvas(renamedCanvas.id);
+            }
+        });
+
+        document.getElementById('toggle-last-canvas-btn').addEventListener('click', () => {
+            if (lastActiveCanvasId) {
+                const currentId = activeCanvasId;
+                renderCanvas(lastActiveCanvasId);
+                lastActiveCanvasId = currentId;
+            }
         });
 
         sendToCanvasSelect.addEventListener('change', (e) => {
@@ -1905,14 +2105,45 @@
                 playlist = Array.from(playSelections).map(videoName => {
                     const videoFile = allVideoFiles.find(f => f.name.startsWith(videoName));
                     if (videoFile) {
-                        // Create a mock wrapper that loadVideo can use
                         return { dataset: { fileName: videoFile.name.replace(/\.[^/.]+$/, ".jpg") } };
                     }
                     return null;
                 }).filter(Boolean);
-            } else {
+            } else if (selectedThumbnails.size > 0) {
                 playlist = Array.from(selectedThumbnails);
+            } else if (buttonsForRemoval.size === 1) {
+                const buttonId = buttonsForRemoval.values().next().value;
+                const buttonElement = document.querySelector(`button[data-id='${buttonId}']`);
+                if (buttonElement) {
+                    const lastClickedData = JSON.parse(renameBtn.dataset.lastClicked || 'null');
+                    if (lastClickedData) {
+                        const { path, fullButtonText, specialType } = lastClickedData;
+                        const isCategoryOnly = specialType === 'plusOne';
+
+                        const username = projectUsernameInput.value.trim();
+                        const category = path[0];
+                        const prefix = `[${username}]_${category}`;
+
+                        const currentCanvas = canvases.get(activeCanvasId);
+                        if (currentCanvas) {
+                            playlist = currentCanvas.thumbnails.filter(thumb => {
+                                const baseFilename = thumb.dataset.fileName.substring(0, thumb.dataset.fileName.lastIndexOf('.'));
+                                const filenameWithoutNumber = baseFilename.replace(/\s*\(\d+\)$/, '').trim();
+                                
+                                if (isCategoryOnly) {
+                                    return filenameWithoutNumber === prefix;
+                                } else {
+                                    const expectedFilenamePart = `${prefix} ${fullButtonText}`;
+                                    return filenameWithoutNumber.startsWith(expectedFilenamePart);
+                                }
+                            });
+                        }
+                    }
+                }
+            } else {
+                 playlist = [];
             }
+
 
             if (playlist.length > 0) {
                 videoOverlay.style.display = 'flex';
@@ -1945,11 +2176,17 @@
         downloadScriptLink.addEventListener('click', downloadBatchFile);
         sizeSelector.addEventListener('change', (event) => {
             const newSize = event.target.value;
-            const projectData = loadProjectData(directoryName);
-            projectData.thumbnailSize = newSize;
-            saveProjectData(directoryName, projectData);
+            const currentCanvas = canvases.get(activeCanvasId);
+            if (currentCanvas) {
+                if (!currentCanvas.settings) {
+                    currentCanvas.settings = {};
+                }
+                currentCanvas.settings.thumbnailSize = newSize;
+                saveCanvasState();
+            }
+
             const editModeBtn = document.getElementById('edit-mode-btn');
-            listViewControls.style.display = newSize === 'list' ? 'block' : 'none';
+            listViewButtonControls.style.display = newSize === 'list' ? 'flex' : 'none';
             if (editModeBtn && editModeBtn.textContent.includes('On')) {
                 layoutLandscapeThumbnails();
             } else {
@@ -1961,27 +2198,26 @@
             }
         });
 
-        listViewCogBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            listViewDropdown.style.display = listViewDropdown.style.display === 'block' ? 'none' : 'block';
+        showThumbnailsBtn.addEventListener('click', () => {
+            showThumbnailsBtn.classList.toggle('active');
+            layoutThumbnailsInList();
+        });
+        showCanvasNameBtn.addEventListener('click', () => {
+            showCanvasNameBtn.classList.toggle('active');
+            layoutThumbnailsInList();
+        });
+        showNewFilenameBtn.addEventListener('click', () => {
+            showNewFilenameBtn.classList.toggle('active');
+            layoutThumbnailsInList();
         });
 
-        document.addEventListener('click', (e) => {
-            if (!listViewDropdown.contains(e.target)) {
-                listViewDropdown.style.display = 'none';
-            }
-        });
-
-        showThumbnailsCheckbox.addEventListener('change', layoutThumbnailsInList);
-        showCanvasNameCheckbox.addEventListener('change', layoutThumbnailsInList);
-        showNewFilenameCheckbox.addEventListener('change', layoutThumbnailsInList);
 
         function layoutThumbnailsInList() {
             thumbnailContainer.classList.add('list-view-active');
             isLayoutFrozen = false;
-            const showThumbnails = showThumbnailsCheckbox.checked;
-            const showCanvasName = showCanvasNameCheckbox.checked;
-            const showNewFilename = showNewFilenameCheckbox.checked;
+            const showThumbnails = showThumbnailsBtn.classList.contains('active');
+            const showCanvasName = showCanvasNameBtn.classList.contains('active');
+            const showNewFilename = showNewFilenameBtn.classList.contains('active');
 
             thumbnailContainer.querySelectorAll('.thumbnail-wrapper').forEach(wrapper => {
                 wrapper.style.position = 'relative';
@@ -2125,6 +2361,16 @@
             document.getElementById('font-size-slider').value = projectData.fontSize;
             document.getElementById('vertical-padding-input').value = projectData.verticalPadding;
             document.getElementById('horizontal-padding-input').value = projectData.horizontalPadding;
+
+            // --- Restore Preview Sidebar State ---
+            const previewSizeSelector = document.getElementById('preview-size-selector');
+            if (projectData.previewSidebarVisible) {
+                rightSidebar.style.display = 'flex';
+                rightSidebar.style.width = `${projectData.previewSidebarWidth}px`;
+            } else {
+                rightSidebar.style.display = 'none';
+            }
+            previewSizeSelector.value = projectData.previewThumbnailSize || '0.5';
 
             loadCustomButtons(projectData.customButtonTree, projectData.collapseState, projectData.buttonVisibility);
 
@@ -2297,6 +2543,42 @@
                     // Subdirectory or its Thumbnails folder doesn't exist, which is fine.
                 }
             }
+
+            // --- Thumbnail Management Prompts ---
+            const videoBasenames = new Set(allVideoFiles.map(f => f.name.substring(0, f.name.lastIndexOf('.'))));
+            const thumbnailBasenames = new Set(thumbnailFiles.map(f => f.name.substring(0, f.name.lastIndexOf('.'))));
+
+            const videosMissingThumbnails = allVideoFiles.filter(f => !thumbnailBasenames.has(f.name.substring(0, f.name.lastIndexOf('.'))));
+            let orphanedThumbnails = thumbnailFiles.filter(f => !videoBasenames.has(f.name.substring(0, f.name.lastIndexOf('.'))));
+
+            // Filter out thumbnails that are already permanently hidden
+            const permanentlyHidden = new Set(projectData.hiddenOrphans || []);
+            const newlyOrphaned = orphanedThumbnails.filter(f => !permanentlyHidden.has(f.name));
+
+            if (newlyOrphaned.length > 0) {
+                const userChoice = await promptOrphanedThumbnails(newlyOrphaned);
+                const orphanNamesToHide = new Set(newlyOrphaned.map(f => f.name));
+                
+                if (userChoice === 'hide') {
+                    thumbnailFiles = thumbnailFiles.filter(f => !orphanNamesToHide.has(f.name));
+                } else if (userChoice === 'delete') {
+                    generateOrphanDeletionScript(newlyOrphaned);
+                } else if (userChoice === 'hideForever') {
+                    projectData.hiddenOrphans = [...permanentlyHidden, ...orphanNamesToHide];
+                    saveProjectData(directoryName, projectData);
+                    thumbnailFiles = thumbnailFiles.filter(f => !orphanNamesToHide.has(f.name));
+                }
+            }
+            
+            // Always filter out the permanently hidden ones from the main list
+            thumbnailFiles = thumbnailFiles.filter(f => !permanentlyHidden.has(f.name));
+            
+            if (videosMissingThumbnails.length > 0) {
+                if (confirm(`${videosMissingThumbnails.length} video(s) are missing thumbnails. Would you like to generate a script to create them?`)) {
+                    generateBatchScript(videosMissingThumbnails, directoryName);
+                    scriptModal.style.display = 'block';
+                }
+            }
             
             if (hasThumbnailsSubdir) {
                 const savedCanvasData = projectData.canvases;
@@ -2374,8 +2656,23 @@
                         const canvas = canvases.get(savedCanvas.id);
                         if (!canvas) return;
                         savedCanvas.thumbnails.forEach(savedThumb => {
-                            const wrapper = wrapperMap.get(savedThumb.fileName);
+                            const wrapper = wrapperMap.get(savedThumb.originalFilename);
                             if (wrapper) {
+                                // Restore both original and current names
+                                wrapper.dataset.fileName = savedThumb.fileName;
+                                const img = wrapper.querySelector('.thumbnail');
+                                if (img) img.dataset.fileName = savedThumb.fileName;
+                                const nameDiv = wrapper.querySelector('.thumbnail-name');
+                                if (nameDiv) {
+                                    nameDiv.textContent = savedThumb.fileName;
+                                    nameDiv.dataset.originalFilename = savedThumb.originalFilename;
+                                }
+                                 const newFilenamePlaceholder = wrapper.querySelector('.new-filename-placeholder');
+                                if (newFilenamePlaceholder && savedThumb.fileName !== savedThumb.originalFilename) {
+                                    newFilenamePlaceholder.textContent = savedThumb.fileName;
+                                }
+
+
                                 canvas.thumbnails.push(wrapper);
                                 wrapper.style.position = 'absolute';
                                 wrapper.style.left = savedThumb.left;
@@ -2383,7 +2680,7 @@
                                 if (savedThumb.previousCanvasId) {
                                     wrapper.dataset.previousCanvasId = savedThumb.previousCanvasId;
                                 }
-                                placedThumbnails.add(savedThumb.fileName);
+                                placedThumbnails.add(savedThumb.originalFilename);
                                 isLayoutFrozen = true;
                             }
                         });
@@ -2408,14 +2705,14 @@
                     projectData.canvases = null;
                     saveProjectData(directoryName, projectData);
                     canvases.clear();
-                    canvases.set(1, { id: 1, name: 'Canvas 1', thumbnails: Array.from(wrapperMap.values()) });
+                    canvases.set(1, { id: 1, name: 'Canvas 1', thumbnails: Array.from(wrapperMap.values()), settings: { thumbnailSize: '1' } });
                     activeCanvasId = 1;
                     isLayoutFrozen = false;
                 }
 
                 if (!Array.from(canvases.values()).find(c => c.name === 'Renamed')) {
                     const renamedCanvasId = getNextCanvasId();
-                    canvases.set(renamedCanvasId, { id: renamedCanvasId, name: 'Renamed', thumbnails: [] });
+                    canvases.set(renamedCanvasId, { id: renamedCanvasId, name: 'Renamed', thumbnails: [], settings: { thumbnailSize: '1' } });
                 }
                 
                 if (projectData.preEditModeCanvasMap) {
@@ -2716,8 +3013,6 @@
             document.getElementById('download-edit-script-link').href = URL.createObjectURL(blob);
         }
 
-        window.onload = init;
-
         function generateFinalBatchScript() {
             const scriptLines = [
                 '# PowerShell Script to process video selections',
@@ -2957,6 +3252,67 @@
             reloadPageBtn.style.display = 'inline-block';
         }
 
+        function generateOrphanDeletionScript(orphanedFiles) {
+            const scriptLines = [
+                '# PowerShell Script to delete orphaned thumbnails',
+                'Write-Host "Deleting orphaned thumbnail files (moving to Recycle Bin)..."',
+                ...orphanedFiles.map(file => `Remove-Item -LiteralPath "Thumbnails\\${file.name}"`),
+                'Write-Host "Deletion complete."',
+                'Read-Host -Prompt "Press Enter to exit"'
+            ];
+            const script = scriptLines.join('\r\n');
+            
+            // Re-use the main script modal
+            scriptModal.querySelector('h2').textContent = 'Delete Orphaned Thumbnails';
+            scriptModal.querySelector('p').textContent = 'This PowerShell script will move the orphaned thumbnails to the Recycle Bin.';
+            batchScriptTextArea.value = script;
+            downloadScriptLink.download = 'delete_orphans.ps1';
+
+            const blob = new Blob([script], { type: 'text/plain;charset=utf-8' });
+            downloadScriptLink.href = URL.createObjectURL(blob);
+            scriptModal.style.display = 'block';
+        }
+
+
+        function promptOrphanedThumbnails(orphanedFiles) {
+            return new Promise(resolve => {
+                const modal = document.getElementById('orphaned-thumbnails-modal');
+                document.getElementById('orphaned-thumbnails-message').textContent = `Found ${orphanedFiles.length} thumbnail(s) without a matching video file. What would you like to do?`;
+                
+                const fileListDiv = document.getElementById('orphaned-files-list');
+                fileListDiv.innerHTML = orphanedFiles.map(f => `<div>${f.name}</div>`).join('');
+
+                const deleteBtn = document.getElementById('delete-orphans-script-btn');
+                const hideBtn = document.getElementById('hide-orphans-btn');
+                const hideForeverBtn = document.getElementById('hide-forever-orphans-btn');
+                const doNothingBtn = document.getElementById('do-nothing-orphans-btn');
+                const closeBtn = modal.querySelector('.close');
+
+                const cleanup = () => {
+                    // Replace buttons to remove event listeners
+                    deleteBtn.replaceWith(deleteBtn.cloneNode(true));
+                    hideBtn.replaceWith(hideBtn.cloneNode(true));
+                    hideForeverBtn.replaceWith(hideForeverBtn.cloneNode(true));
+                    doNothingBtn.replaceWith(doNothingBtn.cloneNode(true));
+                    closeBtn.replaceWith(closeBtn.cloneNode(true));
+                    modal.style.display = 'none';
+                };
+
+                deleteBtn.addEventListener('click', () => { cleanup(); resolve('delete'); }, { once: true });
+                hideBtn.addEventListener('click', () => { cleanup(); resolve('hide'); }, { once: true });
+                hideForeverBtn.addEventListener('click', () => { cleanup(); resolve('hideForever'); }, { once: true });
+                
+                const doNothingHandler = () => {
+                    cleanup();
+                    resolve('nothing');
+                };
+                doNothingBtn.addEventListener('click', doNothingHandler, { once: true });
+                closeBtn.addEventListener('click', doNothingHandler, { once: true });
+
+                modal.style.display = 'block';
+            });
+        }
+
         reloadPageBtn.addEventListener('click', () => {
             location.reload();
         });
@@ -3076,53 +3432,172 @@
         }
 
         document.getElementById('add-element-btn').addEventListener('click', () => addFilenamePart());
+        document.getElementById('clone-filename-button-btn').addEventListener('click', cloneButton);
 
-        createFilenameButtonBtn.addEventListener('click', () => {
-            const category = filenameParts[0]?.value.trim();
-            if (!category) {
-                alert('A "Category" is required to create a button.');
-                return;
-            }
 
-            const elements = filenameParts.slice(1).map(p => p.value.trim()).filter(p => p);
-            if (elements.length === 0) {
-                alert('At least one "Element" is required to create a button.');
-                return;
-            }
-            
-            // --- Save values to localStorage for future suggestions ---
+        function openButtonEditor(buttonId) {
             const projectData = loadProjectData(directoryName);
-            projectData.previousFilenameElements = projectData.previousFilenameElements || [];
-            elements.forEach(el => {
-                if (el && !projectData.previousFilenameElements.includes(el)) {
-                    projectData.previousFilenameElements.push(el);
-                }
-            });
+            const { button, path } = findButtonPathById(projectData.customButtonTree, buttonId);
 
-            projectData.previousFilenameCategories = projectData.previousFilenameCategories || [];
-            if (category && !projectData.previousFilenameCategories.includes(category)) {
-                projectData.previousFilenameCategories.push(category);
+            if (!button || !path) {
+                console.error("Button not found for editing:", buttonId);
+                return;
             }
 
-            // --- Construct button data and save to the main tree ---
-            let customButtonTree = projectData.customButtonTree;
+            // The full path includes the final button name, which we don't want as an "element"
+            const elements = path.slice(1); 
+
+            filenameParts = [
+                { type: 'category', value: path[0] || '' },
+                ...elements.map(el => ({ type: 'element', value: el }))
+            ];
             
-            const path = [category, ...elements];
+            renderFilenameParts();
+            updateFilenamePreview();
+
+            document.getElementById('editing-button-id').value = buttonId;
+            createFilenameButtonBtn.textContent = 'Update Button';
+            document.getElementById('clone-filename-button-btn').style.display = 'block';
+            filenameBuilderModal.style.display = 'block';
+        }
+
+        function findButtonPathById(tree, id, currentPath = []) {
+            for (const node of tree) {
+                 if (node.type === 'button' && String(node.id) === String(id)) {
+                    return { button: node, path: [...currentPath, node.name] };
+                }
+                if (node.type === 'category' && node.children) {
+                    const result = findButtonPathById(node.children, id, [...currentPath, node.name]);
+                    if (result.button) return result;
+                }
+            }
+            return {};
+        }
+
+        function cloneSelectedButton(buttonId) {
+            const projectData = loadProjectData(directoryName);
+            const { path } = findButtonPathById(projectData.customButtonTree, buttonId);
+
+            if (!path) {
+                alert('Could not find the selected button to clone.');
+                return;
+            }
+
+            // Create a modified path for the new button
+            let newPath = [...path];
+            newPath[newPath.length - 1] += ' (Copy)';
+            
+            // Create the new button data object
             const buttonData = {
-                fullButtonText: elements.map(p => `(${p})`).join(' ')
+                fullButtonText: newPath.slice(1).map(p => `(${p})`).join(' '),
+                id: Date.now() + Math.random() // Ensure a unique ID
             };
 
-            if (insertButtonIntoTree(customButtonTree, path, buttonData)) {
-                projectData.customButtonTree = customButtonTree;
+            // Attempt to insert the new button into the tree
+            if (insertButtonIntoTree(projectData.customButtonTree, newPath, buttonData)) {
                 saveProjectData(directoryName, projectData);
                 loadCustomButtons(projectData.customButtonTree, projectData.collapseState, projectData.buttonVisibility);
-                filenameBuilderModal.style.display = 'none';
-                populatePreviousElements(); // Refresh datalists for next time
-                populatePreviousCategories();
+                alert('Button cloned successfully.');
             } else {
-                alert('A button with this exact name and category structure already exists.');
+                alert('Failed to clone button. A button with the name "(Copy)" might already exist.');
             }
-        });
+        }
+
+        function removeButtonFromTreeById(tree, id) {
+             if (!Array.isArray(tree)) return [];
+            
+            let filteredNodes = tree.filter(node => 
+                !(node.type === 'button' && String(node.id) === String(id))
+            );
+
+            return filteredNodes.map(node => {
+                if (node.type === 'category' && node.children) {
+                    node.children = removeButtonFromTreeById(node.children, id);
+                }
+                return node;
+            }).filter(node => !(node.type === 'category' && (!node.children || node.children.length === 0)));
+        }
+
+
+        function cloneButton() {
+            createOrUpdateButton(true); // Call with clone flag
+        }
+
+        function createOrUpdateButton(isClone = false) {
+            const editingButtonId = document.getElementById('editing-button-id').value;
+            const isUpdate = !isClone && editingButtonId;
+
+            const category = filenameParts[0]?.value.trim();
+            if (!category) {
+                alert('A "Category" is required.');
+                return;
+            }
+
+            let elements = filenameParts.slice(1).map(p => p.value.trim()).filter(p => p);
+            if (elements.length === 0) {
+                alert('At least one "Element" is required.');
+                return;
+            }
+            
+            const projectData = loadProjectData(directoryName);
+
+            // Save new elements to suggestions
+            elements.forEach(el => {
+                if (el && !projectData.previousFilenameElements?.includes(el)) {
+                    (projectData.previousFilenameElements = projectData.previousFilenameElements || []).push(el);
+                }
+            });
+            if (category && !projectData.previousFilenameCategories?.includes(category)) {
+                 (projectData.previousFilenameCategories = projectData.previousFilenameCategories || []).push(category);
+            }
+
+            let customButtonTree = projectData.customButtonTree;
+
+            if (isUpdate) {
+                customButtonTree = removeButtonFromTreeById(customButtonTree, editingButtonId);
+            }
+            
+            let path = [category, ...elements];
+            let buttonData = {
+                fullButtonText: elements.map(p => `(${p})`).join(' '),
+                id: isUpdate ? editingButtonId : Date.now() + Math.random()
+            };
+
+            // Main logic change is here
+            if (!insertButtonIntoTree(customButtonTree, path, buttonData)) {
+                // Insertion failed, check why
+                if (isClone) {
+                    // It's a clone and it failed, likely a duplicate. Let's try adding a copy suffix.
+                    elements[elements.length - 1] += ' (Copy)';
+                    path = [category, ...elements];
+                    buttonData.fullButtonText = elements.map(p => `(${p})`).join(' ');
+                    
+                    // Try inserting again with the new name
+                    if (!insertButtonIntoTree(customButtonTree, path, buttonData)) {
+                         alert('Failed to create a unique clone. A button with the name "(Copy)" may also exist.');
+                         return; // Abort if even the copy fails
+                    }
+                } else {
+                    // It's a create/update operation that failed
+                    alert('A button with this exact name and category structure already exists.');
+                    if (isUpdate) { // If update failed, we need to restore the original state
+                         loadCustomButtons(projectData.customButtonTree, projectData.collapseState, projectData.buttonVisibility);
+                    }
+                    return; // Abort
+                }
+            }
+
+            // If we reach here, insertion was successful
+            projectData.customButtonTree = customButtonTree;
+            saveProjectData(directoryName, projectData);
+            loadCustomButtons(projectData.customButtonTree, projectData.collapseState, projectData.buttonVisibility);
+            filenameBuilderModal.style.display = 'none';
+            populatePreviousElements();
+            populatePreviousCategories();
+        }
+        
+        createFilenameButtonBtn.addEventListener('click', () => createOrUpdateButton(false));
+
 
         async function loadCustomButtons(customButtonTree, collapseState, buttonVisibility) {
             if (!directoryName) {
@@ -3285,8 +3760,10 @@
         visibleButtonsModal.style.display = 'none';
     });
 
-        function updateBottomBar() {
+        function updateBottomBarInfo() {
             const infoDiv = document.getElementById('bottom-bar-info');
+
+            // Priority 1: Display info about sidebar buttons selected for removal.
             if (buttonsForRemoval.size === 1) {
                 const buttonId = buttonsForRemoval.values().next().value;
                 const projectData = loadProjectData(directoryName);
@@ -3299,27 +3776,35 @@
                         }
                         if (node.type === 'category' && node.children) {
                             const result = findButtonPath(node.children, id, [...currentPath, node.name]);
-                            if (result) {
-                                return result;
-                            }
+                            if (result) return result;
                         }
                     }
                     return null;
                 }
                 
                 const result = findButtonPath(customButtonTree, buttonId);
-
                 if (result && result.path.length > 0) {
                     const username = projectUsernameInput.value.trim() || 'username';
                     const category = result.path[0];
                     const fullButtonText = result.button.fullButtonText;
-                    infoDiv.textContent = `[${username}]_${category} ${fullButtonText}`;
+                    const constructedName = `[${username}]_${category} ${fullButtonText}`;
+                    infoDiv.textContent = constructedName.replace(/\s*\(\d+\)$/, '').trim();
                 } else {
-                    infoDiv.textContent = '1 item selected';
+                    infoDiv.textContent = '1 sidebar button selected';
                 }
+                 return; // Exit after showing button info
 
             } else if (buttonsForRemoval.size > 1) {
-                infoDiv.textContent = `${buttonsForRemoval.size} items selected`;
+                infoDiv.textContent = `${buttonsForRemoval.size} sidebar buttons selected`;
+                return; // Exit after showing button info
+            }
+
+            // Priority 2: Display info about selected thumbnails.
+            if (selectedThumbnails.size === 1) {
+                const singleThumbnail = selectedThumbnails.values().next().value;
+                infoDiv.textContent = singleThumbnail.dataset.fileName;
+            } else if (selectedThumbnails.size > 1) {
+                infoDiv.textContent = `${selectedThumbnails.size} items selected`;
             } else {
                 infoDiv.textContent = '';
             }
@@ -3328,13 +3813,16 @@
         function createSidebarButton(buttonData, path) {
             const { id, name, fullButtonText, specialType } = buttonData;
             
+            const container = document.createElement('div');
+            container.className = 'sidebar-button-container';
+            container.style.position = 'relative';
+
             const button = document.createElement('button');
-            button.textContent = name.replace(/[()]/g, ''); // Remove parentheses for display
+            button.textContent = name.replace(/[()]/g, '');
             button.dataset.id = id;
             const numElements = parseInt(document.getElementById('num-elements-input').value, 10);
-            button.style.paddingLeft = `${(numElements) * 8}px`; // Indent based on hierarchy depth
+            button.style.paddingLeft = `${(numElements) * 8}px`;
 
-            // Preserve selection state across re-renders
             if (buttonsForRemoval.has(String(id))) {
                 button.classList.add('selected-for-removal');
             }
@@ -3349,35 +3837,26 @@
                     button.classList.remove('selected-for-removal');
                     delete renameBtn.dataset.lastClicked;
                 } else {
-                    // Deselect any previously selected button
                     document.querySelectorAll('#sidebar-scroll-container button.selected-for-removal').forEach(b => {
                         b.classList.remove('selected-for-removal');
                         buttonsForRemoval.delete(b.dataset.id);
                     });
-
                     buttonsForRemoval.add(buttonId);
                     button.classList.add('selected-for-removal');
                     
-                    const buttonData = {
-                        id: buttonId,
-                        name: name,
-                        fullButtonText: fullButtonText,
-                        specialType: specialType,
-                        path: path
-                    };
-                    renameBtn.dataset.lastClicked = JSON.stringify(buttonData);
+                    const buttonInfo = { id, name, fullButtonText, specialType, path };
+                    renameBtn.dataset.lastClicked = JSON.stringify(buttonInfo);
                 }
 
-                updateRemoveButtonState();
-                updateBottomBar();
-                
-                // Highlighting is now decoupled from renaming and acts as a selection preview.
-                // It always adds to the selection when a button is active.
+                updateSidebarActionButtonsState();
+                updateBottomBarInfo();
+                updatePreviewPanel();
                 highlightMatchingThumbnails(path, fullButtonText, !isCurrentlySelected, specialType === 'plusOne');
             };
 
+
             const fontSize = document.getElementById('font-size-slider').value;
-            button.style.cssText += `
+             button.style.cssText += `
                 width: 100%; margin: 0; padding-top: 0; padding-bottom: 0; height: 36px;
                 background-color: #1877f2; color: #ffffff; border: 1px solid #444444;
                 border-top: none; border-radius: 0; font-size: ${fontSize}px; cursor: pointer;
@@ -3386,7 +3865,8 @@
             button.style.textAlign = 'left';
             
             adjustButtonFontSize(button);
-            return button;
+            container.appendChild(button);
+            return container;
         }
 
         function highlightMatchingThumbnails(path, fullButtonText, shouldSelect, isCategoryOnly) {
@@ -3428,6 +3908,7 @@
                 });
             }
             updatePlayButtonState();
+            updateBottomBarInfo();
         }
 
         function adjustButtonFontSize(button) {
@@ -3438,6 +3919,10 @@
         newFilenameBtn.addEventListener('click', () => {
             filenameBuilderModal.style.display = 'block';
             initializeFilenameBuilder();
+            // Reset to "create" mode
+            document.getElementById('editing-button-id').value = '';
+            createFilenameButtonBtn.textContent = 'Add Button';
+            document.getElementById('clone-filename-button-btn').style.display = 'none';
         });
 
         removeBtn.addEventListener('click', () => {
@@ -3474,7 +3959,9 @@
 
                 buttonsForRemoval.clear();
                 loadCustomButtons(projectData.customButtonTree, projectData.collapseState, projectData.buttonVisibility);
-                updateRemoveButtonState();
+                updateSidebarActionButtonsState();
+                updateBottomBarInfo();
+                updatePreviewPanel(); // Clear preview panel
             }
         });
 
@@ -3573,6 +4060,7 @@
                         selectedThumbnails.add(wrapper);
                     }
                     updatePlayButtonState();
+                    updateBottomBarInfo();
                 }
 
                 document.onmouseup = null;
@@ -3881,6 +4369,7 @@
                 }
             });
             updatePlayButtonState();
+            updateBottomBarInfo();
             saveCanvasState();
         }
 
@@ -3909,6 +4398,199 @@
                 sidebar.style.width = newWidth + 'px';
             }
         }
+
+        previewBtn.addEventListener('click', () => {
+            const isHidden = rightSidebar.style.display === 'none';
+            rightSidebar.style.display = isHidden ? 'flex' : 'none';
+
+            if (directoryName) {
+                const projectData = loadProjectData(directoryName);
+                projectData.previewSidebarVisible = isHidden;
+                saveProjectData(directoryName, projectData);
+            }
+        });
+
+        const rightResizer = document.getElementById('right-sidebar-resizer');
+        rightResizer.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+
+            const handleRightMouseUp = () => {
+                document.removeEventListener('mousemove', handleRightMouseMove);
+                document.removeEventListener('mouseup', handleRightMouseUp);
+                
+                if (directoryName) {
+                    const projectData = loadProjectData(directoryName);
+                    projectData.previewSidebarWidth = parseInt(rightSidebar.style.width, 10);
+                    saveProjectData(directoryName, projectData);
+                }
+            };
+
+            document.addEventListener('mousemove', handleRightMouseMove);
+            document.addEventListener('mouseup', handleRightMouseUp);
+        });
+
+        function handleRightMouseMove(e) {
+            const contentArea = document.getElementById('content-area');
+            const newWidth = contentArea.getBoundingClientRect().right - e.clientX;
+            if (newWidth > 100 && newWidth < 500) { // Min and max width
+                rightSidebar.style.width = newWidth + 'px';
+                isLayoutFrozen = false; // Force unfreeze before recalculating
+                layoutThumbnailsInGrid(); // Recalculate grid on resize
+            }
+        }
+
+        function updatePreviewPanel() {
+            previewContainer.innerHTML = '';
+            const lastClickedButtonData = JSON.parse(renameBtn.dataset.lastClicked || 'null');
+            if (!lastClickedButtonData) {
+                return; // No button selected, so clear the panel and exit.
+            }
+
+            const { path, fullButtonText, specialType } = lastClickedButtonData;
+            const isCategoryOnly = specialType === 'plusOne';
+            const username = projectUsernameInput.value.trim() || 'username';
+            const category = path[0];
+            const prefix = `[${username}]_${category}`;
+
+            const matchingThumbnails = [];
+            for (const canvas of canvases.values()) {
+                canvas.thumbnails.forEach(thumb => {
+                    const baseFilename = thumb.dataset.fileName.substring(0, thumb.dataset.fileName.lastIndexOf('.'));
+                    const filenameWithoutNumber = baseFilename.replace(/\s*\(\d+\)$/, '').trim();
+                    
+                    let matches = false;
+                    if (isCategoryOnly) {
+                        matches = filenameWithoutNumber === prefix;
+                    } else {
+                        const expectedFilenamePart = `${prefix} ${fullButtonText}`;
+                        matches = filenameWithoutNumber.startsWith(expectedFilenamePart);
+                    }
+
+                    if (matches) {
+                        matchingThumbnails.push(thumb);
+                    }
+                });
+            }
+
+            matchingThumbnails.sort((a, b) => a.dataset.fileName.localeCompare(b.dataset.fileName));
+
+            matchingThumbnails.forEach(thumb => {
+                const clone = thumb.cloneNode(true);
+                clone.style.position = 'relative';
+                clone.style.left = 'auto';
+                clone.style.top = 'auto';
+                clone.style.marginBottom = '10px';
+                clone.classList.remove('selected');
+                
+                const thumbImg = clone.querySelector('.thumbnail');
+                if(thumbImg) {
+                    thumbImg.style.width = '128px';
+                    thumbImg.style.height = 'auto';
+                }
+                makeDraggable(clone);
+                previewContainer.appendChild(clone);
+            });
+            
+            // Apply the layout after the DOM has been updated
+            requestAnimationFrame(() => {
+                const currentPreviewSize = document.getElementById('preview-size-selector').value;
+                layoutPreviewPane(currentPreviewSize);
+            });
+        }
+
+        function layoutPreviewPane(size) {
+            const container = document.getElementById('preview-container');
+            if (!container) return;
+            const wrappers = container.querySelectorAll('.thumbnail-wrapper');
+            const padding = 5;
+
+            // Clear any existing absolute positioning before recalculating
+            wrappers.forEach(w => {
+                w.style.position = 'relative';
+                w.style.left = '';
+                w.style.top = '';
+            });
+
+            if (size === 'list') {
+                wrappers.forEach(wrapper => {
+                    // Reset styles for list view
+                    wrapper.style.position = 'relative';
+                    wrapper.style.left = '';
+                    wrapper.style.top = '';
+                    wrapper.classList.add('list-view');
+                    const thumb = wrapper.querySelector('.thumbnail');
+                    if (thumb) {
+                        thumb.style.width = '128px'; // Fixed size for list view
+                        thumb.style.height = '72px';
+                    }
+                });
+            } else {
+                // Clear inline styles from list view before applying grid
+                wrappers.forEach(wrapper => {
+                    wrapper.classList.remove('list-view');
+                    const thumb = wrapper.querySelector('.thumbnail');
+                    if(thumb) {
+                        thumb.style.width = '';
+                        thumb.style.height = '';
+                    }
+                });
+
+                const scale = parseFloat(size);
+                const containerWidth = container.clientWidth;
+                let xOffset = padding;
+                let yOffset = padding;
+                let maxRowHeight = 0;
+
+                wrappers.forEach(wrapper => {
+                    const thumb = wrapper.querySelector('.thumbnail');
+                    const nameDiv = wrapper.querySelector('.thumbnail-name');
+
+                    const originalWidth = parseFloat(thumb.dataset.originalWidth || 256);
+                    const originalHeight = parseFloat(thumb.dataset.originalHeight || 144);
+                    
+                    const scaledWidth = originalWidth * scale;
+                    const scaledHeight = originalHeight * scale;
+
+                    // Make name visible for height calculation if needed
+                    const nameWasHidden = nameDiv && nameDiv.style.display === 'none';
+                    if (nameWasHidden) nameDiv.style.display = 'block';
+                    const nameHeight = nameDiv ? nameDiv.offsetHeight : 0;
+                    if (nameWasHidden) nameDiv.style.display = 'none';
+
+                    const wrapperHeight = scaledHeight + nameHeight;
+
+                    if (xOffset + scaledWidth + padding > containerWidth && xOffset > padding) {
+                        xOffset = padding;
+                        yOffset += maxRowHeight + padding;
+                        maxRowHeight = 0;
+                    }
+                    
+                    wrapper.style.position = 'absolute';
+                    wrapper.style.left = xOffset + 'px';
+                    wrapper.style.top = yOffset + 'px';
+                    thumb.style.width = scaledWidth + 'px';
+                    thumb.style.height = scaledHeight + 'px';
+
+                    if (wrapperHeight > maxRowHeight) {
+                        maxRowHeight = wrapperHeight;
+                    }
+                    
+                    xOffset += scaledWidth + padding;
+                });
+            }
+        }
+        
+        const previewSizeSelector = document.getElementById('preview-size-selector');
+        previewSizeSelector.addEventListener('change', (event) => {
+            const newSize = event.target.value;
+            layoutPreviewPane(newSize);
+            if (directoryName) {
+                const projectData = loadProjectData(directoryName);
+                projectData.previewThumbnailSize = newSize;
+                saveProjectData(directoryName, projectData);
+            }
+        });
+
 
         generateEditThumbnailsNewBtn.addEventListener('click', () => {
             const trackingFileName = 'processed_edit_mode_videos.txt';
@@ -3956,8 +4638,6 @@
             document.getElementById('download-edit-script-link').download = 'generate_edit_thumbnails_new.bat';
             editScriptModal.style.display = 'block';
         });
-
-    window.onload = init;
 
         generateFolderThumbnailsBtn.addEventListener('click', () => {
             const script = [
@@ -4065,6 +4745,8 @@
             input.click();
         });
 
+        window.onload = init;
+
         // --- Test hook for Playwright ---
         class MockFileHandle {
             constructor(name) {
@@ -4133,6 +4815,7 @@
                 console.error("Error in test hook processDirectory:", e);
             }
         });
+
     </script>
 </body>
 </html>
