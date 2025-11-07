@@ -68,7 +68,7 @@
 
         #preview-container {
             flex-grow: 1;
-            padding: 5px;
+            padding: 10px;
             position: relative;
             overflow-y: auto;
         }
@@ -179,11 +179,7 @@
             justify-content: space-between;
         }
         #bottom-bar-info {
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            min-width: 0;
-            flex-shrink: 1;
+            /* Styles removed to allow text to wrap */
         }
         .top-bar label {
             margin-right: 10px; /* Add padding between label and dropdown */
@@ -338,8 +334,8 @@
             display: none;
             z-index: 2147483647;
         }
-        #filename-builder-modal, #script-modal, #visible-buttons-modal, #edit-script-modal, #final-landscape-script-modal, #move-rename-script-modal, #orphaned-thumbnails-modal, #refresh-project-modal {
-            z-index: 10000;
+        #filename-builder-modal {
+            z-index: 2500;
         }
         .landscape-row.selected-landscape {
             outline: 3px dashed blue;
@@ -579,8 +575,6 @@
             min-width: 160px;
             box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
             z-index: 1;
-            max-height: calc(100vh - 82px);
-            overflow-y: auto;
         }
 
         .dropdown-content a {
@@ -595,7 +589,7 @@
         }
 
         .dropdown-content a:hover {
-            background-color: #166fe5;
+            background-color: #1877f2;
             color: #ffffff;
         }
 
@@ -605,27 +599,12 @@
 
         .nested-dropdown-content {
             display: none;
-            /* position, left, top are now set by JS */
+            position: absolute;
+            left: 100%;
+            top: 0;
             background-color: #ffffff;
             min-width: 160px;
             box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
-            z-index: 2;
-        }
-
-        #recent-directories-list a {
-            color: #000000;
-            padding: 12px 16px;
-            text-decoration: none;
-            display: block;
-        }
-
-        #recent-directories-list a:nth-child(even) {
-            background-color: #f2f2f2;
-        }
-
-        #recent-directories-list a:hover {
-            background-color: #166fe5;
-            color: #ffffff;
         }
 
         .sidebar-section button.selected-for-removal,
@@ -720,9 +699,6 @@
             color: #000000;
          }
 
-        .filename-builder-modal-content h2 {
-            cursor: move;
-        }
         #create-filename-button-btn {
             background-color: #1877f2;
             color: #ffffff;
@@ -839,7 +815,6 @@
                         <a href="#" id="import-project-btn">Import Project</a>
                         <a href="#" id="export-project-btn">Export Project</a>
                         <a href="#" id="recalculate-suffix-btn">Recalculate Suffix</a>
-                        <a href="#" id="refresh-project-btn">Refresh Project</a>
                     </div>
                 </div>
                 <button id="load-directory-btn">Load Directory</button>
@@ -852,7 +827,6 @@
             <div class="top-bar">
                 <button id="test-hook-load-dir" style="display:none;">Test Hook</button>
                 <button id="test-hook-load-padding-dir" style="display:none;">Test Hook Padding</button>
-                <button id="test-hook-load-orphaned-dir" style="display:none;">Test Hook Orphaned</button>
                 <select id="size-selector">
                     <option value="list">List</option>
                     <option value="0.2">20%</option>
@@ -1066,16 +1040,6 @@
         </div>
     </div>
 
-    <div id="refresh-project-modal" class="modal">
-        <div class="modal-content">
-            <span class="close">&times;</span>
-            <h2>Refresh Project</h2>
-            <p>Choose how you would like to refresh the project:</p>
-            <button id="refresh-thumbnails-full-btn">Refresh Thumbnails</button>
-            <button id="clear-cache-reload-btn">Clear Cache & Reload</button>
-        </div>
-    </div>
-
     <script>
         // --- IndexedDB Helpers ---
         function getDb(key) {
@@ -1094,39 +1058,6 @@
             });
         }
 
-        async function setFileMetadata(dirName, fileName, metadata) {
-            const db = await openMetadataDB();
-            return new Promise((resolve, reject) => {
-                const transaction = db.transaction('fileMetadata', 'readwrite');
-                const store = transaction.objectStore('fileMetadata');
-                const request = store.put(metadata, `${dirName}-${fileName}`);
-                request.onsuccess = () => resolve();
-                request.onerror = () => reject(request.error);
-            });
-        }
-
-        function openMetadataDB() {
-            return new Promise((resolve, reject) => {
-                const request = indexedDB.open('file-metadata-db', 1);
-                request.onupgradeneeded = (event) => {
-                    const db = event.target.result;
-                    db.createObjectStore('fileMetadata');
-                };
-                request.onsuccess = () => resolve(request.result);
-                request.onerror = () => reject(request.error);
-            });
-        }
-
-        async function getFileMetadata(dirName, fileName) {
-            const db = await openMetadataDB();
-            return new Promise((resolve, reject) => {
-                const transaction = db.transaction('fileMetadata', 'readonly');
-                const store = transaction.objectStore('fileMetadata');
-                const request = store.get(`${dirName}-${fileName}`);
-                request.onsuccess = () => resolve(request.result);
-                request.onerror = () => reject(request.error);
-            });
-        }
 
         function setDb(key, value) {
             return new Promise((resolve, reject) => {
@@ -1472,49 +1403,6 @@
             contentSpacer.style.height = (maxBottom + 20) + 'px';
         }
 
-        function generateFullRefreshScript() {
-            const videoFiles = allVideoFiles;
-            const videoBasenames = new Set(videoFiles.map(f => f.name.substring(0, f.name.lastIndexOf('.'))));
-            
-            const scriptLines = [
-                '@echo off',
-                'setlocal enabledelayedexpansion',
-                'cd /d "%~dp0"',
-                'echo Refreshing thumbnails...',
-                'set "videoFiles=video_files.tmp"',
-                '> "!videoFiles!" (',
-                ...videoFiles.map(file => `    echo ${file.name.substring(0, file.name.lastIndexOf('.'))}`),
-                ')',
-                '',
-                'for %%f in ("Thumbnails\\*.jpg") do (',
-                '    set "thumbName=%%~nf"',
-                '    findstr /x /c:"!thumbName!" "!videoFiles!" >nul',
-                '    if errorlevel 1 (',
-                '        echo Deleting orphaned thumbnail: %%f',
-                '        del "%%f"',
-                '    )',
-                ')',
-                '',
-                'del "!videoFiles!"',
-                '',
-                ...videoFiles.map(file => {
-                    const fileName = file.name;
-                    const thumbnailName = fileName.substring(0, fileName.lastIndexOf('.')) + '.jpg';
-                    return `ffmpeg -y -i "${fileName}" -ss 00:00:02.000 -frames:v 1 -vf "scale=256:256:force_original_aspect_ratio=decrease" "Thumbnails\\${thumbnailName}" >nul 2>&1 || echo Failed to generate thumbnail for ${fileName}`;
-                }),
-                'echo.',
-                'echo Thumbnail refresh complete.',
-                'pause'
-            ];
-            
-            batchScriptTextArea.value = scriptLines.join('\\r\\n');
-            const blob = new Blob([scriptLines.join('\\r\\n')], { type: 'text/plain;charset=utf-8' });
-            downloadScriptLink.href = URL.createObjectURL(blob);
-            downloadScriptLink.download = 'refresh_thumbnails.bat';
-            scriptModal.style.display = 'block';
-            document.getElementById('refresh-project-modal').style.display = 'none';
-        }
-
         async function init() {
             let directoryLoaded = false;
             try {
@@ -1551,41 +1439,10 @@
                 }
             });
 
-            const refreshProjectBtn = document.getElementById('refresh-project-btn');
-            const refreshProjectModal = document.getElementById('refresh-project-modal');
-
-            refreshProjectBtn.addEventListener('click', () => {
-                refreshProjectModal.style.display = 'block';
-            });
-
-            refreshProjectModal.querySelector('.close').addEventListener('click', () => {
-                refreshProjectModal.style.display = 'none';
-            });
-
-            document.getElementById('refresh-thumbnails-full-btn').addEventListener('click', generateFullRefreshScript);
-
-            document.getElementById('clear-cache-reload-btn').addEventListener('click', () => {
-                indexedDB.deleteDatabase('file-metadata-db');
-                indexedDB.deleteDatabase('thumbnail-tool-db');
-                location.reload();
-            });
-
             recentDirectoriesDropdown.addEventListener('click', (event) => {
-                event.preventDefault();
                 event.stopPropagation();
                 const list = document.getElementById('recent-directories-list');
-                const dropdownLink = event.currentTarget;
-                const dropdownRect = dropdownLink.getBoundingClientRect();
-
-                if (list.style.display === 'block') {
-                    list.style.display = 'none';
-                } else {
-                    document.body.appendChild(list);
-                    list.style.position = 'fixed';
-                    list.style.top = `${dropdownRect.top}px`;
-                    list.style.left = `${dropdownRect.right}px`;
-                    list.style.display = 'block';
-                }
+                list.style.display = list.style.display === 'block' ? 'none' : 'block';
             });
 
             const numElementsInput = document.getElementById('num-elements-input');
@@ -1768,24 +1625,12 @@
         });
 
         window.addEventListener('click', (event) => {
-            const cogDropdown = document.getElementById('cog-dropdown');
-            const recentDirectoriesList = document.getElementById('recent-directories-list');
-
-            // Close cog dropdown and its children
-            if (!event.target.matches('.sidebar-cog-btn') && !cogDropdown.contains(event.target)) {
-                if (cogDropdown.style.display === 'block') {
-                    cogDropdown.style.display = 'none';
-                    // Also hide the recent directories list when the main dropdown closes
-                    if (recentDirectoriesList.style.display === 'block') {
-                       recentDirectoriesList.style.display = 'none';
-                    }
-                }
-            }
-
-            // Close recent directories list if clicking outside of it and its trigger
-            if (!recentDirectoriesDropdown.contains(event.target) && !recentDirectoriesList.contains(event.target)) {
-                 if (recentDirectoriesList.style.display === 'block') {
-                    recentDirectoriesList.style.display = 'none';
+            const dropdown = document.getElementById('cog-dropdown');
+            // If the click is outside the cog button AND outside the dropdown content
+            if (!event.target.matches('.sidebar-cog-btn') && !dropdown.contains(event.target)) {
+                if (dropdown.style.display === 'block') {
+                    dropdown.style.display = 'none';
+                    document.getElementById('recent-directories-list').style.display = 'none';
                 }
             }
         });
@@ -2491,9 +2336,8 @@
                     nameDiv.textContent = originalFilename;
                     newFilenamePlaceholder.textContent = newFilename;
                 } else {
-                    // When not showing new name, the main display should be the original name
                     nameDiv.textContent = originalFilename;
-                    newFilenamePlaceholder.textContent = ''; // Clear the new filename placeholder
+                    newFilenamePlaceholder.textContent = '...'; // Or some other placeholder
                 }
 
                 if (thumb) thumb.style.display = showThumbnails ? 'block' : 'none';
@@ -2785,10 +2629,6 @@
                 for await (const entry of dirHandle.values()) {
                     if (entry.kind === 'file' && entry.name.match(/\.(mp4|avi|mov|mkv)$/i)) {
                         const file = await entry.getFile();
-                        const metadata = await getFileMetadata(directoryName, file.name);
-                        if (!metadata || file.lastModified > metadata.lastModified) {
-                            thumbnailsToUpdate.add(file.name.replace(/\.[^/.]+$/, ''));
-                        }
                         file.customPath = pathPrefix; // Store the subdirectory
                         allVideoFiles.push(file);
                     }
@@ -2831,24 +2671,27 @@
             const videosMissingThumbnails = allVideoFiles.filter(f => !thumbnailBasenames.has(f.name.substring(0, f.name.lastIndexOf('.'))));
             let orphanedThumbnails = thumbnailFiles.filter(f => !videoBasenames.has(f.name.substring(0, f.name.lastIndexOf('.'))));
 
-            // Filter out the ones the user has permanently hidden
-            const permanentlyHidden = projectData.hiddenOrphans || [];
-            orphanedThumbnails = orphanedThumbnails.filter(f => !permanentlyHidden.includes(f.name));
+            // Filter out thumbnails that are already permanently hidden
+            const permanentlyHidden = new Set(projectData.hiddenOrphans || []);
+            const newlyOrphaned = orphanedThumbnails.filter(f => !permanentlyHidden.has(f.name));
 
-            if (orphanedThumbnails.length > 0) {
-                const userAction = await promptOrphanedThumbnails(orphanedThumbnails);
-                if (userAction === 'delete') {
-                    generateOrphanDeletionScript(orphanedThumbnails);
-                } else if (userAction === 'hide') {
-                    // Just for this session, filter them out
-                    thumbnailFiles = thumbnailFiles.filter(f => !orphanedThumbnails.some(o => o.name === f.name));
-                } else if (userAction === 'hideForever') {
-                    projectData.hiddenOrphans = [...permanentlyHidden, ...orphanedThumbnails.map(f => f.name)];
+            if (newlyOrphaned.length > 0) {
+                const userChoice = await promptOrphanedThumbnails(newlyOrphaned);
+                const orphanNamesToHide = new Set(newlyOrphaned.map(f => f.name));
+                
+                if (userChoice === 'hide') {
+                    thumbnailFiles = thumbnailFiles.filter(f => !orphanNamesToHide.has(f.name));
+                } else if (userChoice === 'delete') {
+                    generateOrphanDeletionScript(newlyOrphaned);
+                } else if (userChoice === 'hideForever') {
+                    projectData.hiddenOrphans = [...permanentlyHidden, ...orphanNamesToHide];
                     saveProjectData(directoryName, projectData);
-                    thumbnailFiles = thumbnailFiles.filter(f => !orphanedThumbnails.some(o => o.name === f.name));
+                    thumbnailFiles = thumbnailFiles.filter(f => !orphanNamesToHide.has(f.name));
                 }
-                // If 'nothing', we just proceed with them visible.
             }
+            
+            // Always filter out the permanently hidden ones from the main list
+            thumbnailFiles = thumbnailFiles.filter(f => !permanentlyHidden.has(f.name));
             
             if (videosMissingThumbnails.length > 0) {
                 if (confirm(`${videosMissingThumbnails.length} video(s) are missing thumbnails. Would you like to generate a script to create them?`)) {
@@ -2880,10 +2723,6 @@
                 });
 
                 const loadedImages = await Promise.all(imageLoadPromises);
-                
-                allVideoFiles.forEach(async (file) => {
-                    await setFileMetadata(directoryName, file.name, { lastModified: file.lastModified });
-                });
 
                 const wrapperMap = new Map();
                 loadedImages.forEach(img => {
@@ -3071,8 +2910,6 @@
                     a.title = dir.name;
                     a.addEventListener('click', async (e) => {
                         e.preventDefault();
-                        e.stopPropagation(); // Prevent the main dropdown click handler from firing
-
                         // --- Validate handle before use ---
                         if (!dir.handle || typeof dir.handle.queryPermission !== 'function') {
                             alert('This directory reference is stale. Please re-select it using "Load Directory".');
@@ -3085,12 +2922,9 @@
                                                   await dir.handle.requestPermission({ mode: 'read' }) === 'granted';
                             if (hasPermission) {
                                 await processDirectory(dir.handle);
-                                // Explicitly hide both dropdowns after loading
-                                document.getElementById('cog-dropdown').style.display = 'none';
-                                document.getElementById('recent-directories-list').style.display = 'none';
+                                document.getElementById('cog-dropdown').style.display = 'none'; // Close menu after loading
                             }
                         } catch(e) {
-                            console.error('Error loading recent directory:', e);
                             alert('Could not access directory. It may have been moved, deleted, or permissions were denied.');
                             await removeDirectory(dir.name);
                         }
@@ -3637,8 +3471,8 @@
         
         function initializeFilenameBuilder() {
             filenamePartsContainer.innerHTML = '';
-            // Start with a category
-            filenameParts = [{ type: 'category', value: '' }];
+            // Start with a category and one element
+            filenameParts = [{ type: 'category', value: '' }, { type: 'element', value: '' }];
             renderFilenameParts();
             updateFilenamePreview();
             populatePreviousElements();
@@ -3672,19 +3506,9 @@
 
                 if (index > 0) { // Can't remove the 'Category'
                     const removeBtn = document.createElement('button');
-                    removeBtn.textContent = 'X';
+                    removeBtn.textContent = '-';
                     removeBtn.onclick = () => removeFilenamePart(index);
                     row.appendChild(removeBtn);
-
-                    const upBtn = document.createElement('button');
-                    upBtn.textContent = '↑';
-                    upBtn.onclick = () => moveFilenamePart(index, -1);
-                    row.appendChild(upBtn);
-
-                    const downBtn = document.createElement('button');
-                    downBtn.textContent = '↓';
-                    downBtn.onclick = () => moveFilenamePart(index, 1);
-                    row.appendChild(downBtn);
                 }
                 filenamePartsContainer.appendChild(row);
             });
@@ -3703,12 +3527,14 @@
             filenamePreview.textContent = `[${username}]_${category} ${elementsString} (1).mp4`;
 
             // Also show the final button text and structure
-            const buttonName = elements.length > 0 ? elements[elements.length - 1] : category;
-            let structure = category;
-            if (elements.length > 1) {
-                structure += ` -> ${elements.slice(0, -1).join(' -> ')}`;
+            if (elements.length > 0) {
+                const buttonName = elements[elements.length - 1];
+                let structure = category;
+                if (elements.length > 1) {
+                    structure += ` -> ${elements.slice(0, -1).join(' -> ')}`;
+                }
+                filenamePreview.textContent += `\nButton: "${buttonName}" under "${structure}"`;
             }
-            filenamePreview.textContent += `\nButton: "${buttonName}" under "${structure}"`;
         }
 
         function addFilenamePart(value = '') {
@@ -3718,21 +3544,11 @@
         }
 
         function removeFilenamePart(index) {
-            if (filenameParts.length > 1) { 
+            if (filenameParts.length > 2) { // Always keep at least one category and one element
                 filenameParts.splice(index, 1);
                 renderFilenameParts();
                 updateFilenamePreview();
             }
-        }
-
-        function moveFilenamePart(index, direction) {
-            if (index + direction < 1 || index + direction >= filenameParts.length) {
-                return;
-            }
-            const part = filenameParts.splice(index, 1)[0];
-            filenameParts.splice(index + direction, 0, part);
-            renderFilenameParts();
-            updateFilenamePreview();
         }
 
         function getPreviousElements() {
@@ -3837,6 +3653,10 @@
             }
 
             let elements = filenameParts.slice(1).map(p => p.value.trim()).filter(p => p);
+            if (elements.length === 0) {
+                alert('At least one "Element" is required.');
+                return;
+            }
 
             // Logic to append "(Copy)" if no changes were made
             const currentPartsString = JSON.stringify(filenameParts);
@@ -4056,9 +3876,6 @@
 
         function updateBottomBarInfo() {
             const infoDiv = document.getElementById('bottom-bar-info');
-            infoDiv.style.fontSize = ''; // Reset font size
-
-            let textContent = '';
 
             // Priority 1: Display info about sidebar buttons selected for removal.
             if (buttonsForRemoval.size === 1) {
@@ -4085,34 +3902,25 @@
                     const category = result.path[0];
                     const fullButtonText = result.button.fullButtonText;
                     const constructedName = `[${username}]_${category} ${fullButtonText}`;
-                    textContent = constructedName.replace(/\s*\(\d+\)$/, '').trim();
+                    infoDiv.textContent = constructedName.replace(/\s*\(\d+\)$/, '').trim();
                 } else {
-                    textContent = '1 sidebar button selected';
+                    infoDiv.textContent = '1 sidebar button selected';
                 }
+                 return; // Exit after showing button info
 
             } else if (buttonsForRemoval.size > 1) {
-                textContent = `${buttonsForRemoval.size} sidebar buttons selected`;
+                infoDiv.textContent = `${buttonsForRemoval.size} sidebar buttons selected`;
+                return; // Exit after showing button info
             }
+
             // Priority 2: Display info about selected thumbnails.
-            else if (selectedThumbnails.size === 1) {
+            if (selectedThumbnails.size === 1) {
                 const singleThumbnail = selectedThumbnails.values().next().value;
-                textContent = singleThumbnail.dataset.fileName;
+                infoDiv.textContent = singleThumbnail.dataset.fileName;
             } else if (selectedThumbnails.size > 1) {
-                textContent = `${selectedThumbnails.size} items selected`;
+                infoDiv.textContent = `${selectedThumbnails.size} items selected`;
             } else {
-                textContent = '';
-            }
-
-            infoDiv.textContent = textContent;
-
-            // Dynamically adjust font size
-            if (textContent) {
-                let fontSize = 14; // Starting font size
-                infoDiv.style.fontSize = `${fontSize}px`;
-                while (infoDiv.scrollWidth > infoDiv.clientWidth && fontSize > 8) {
-                    fontSize -= 0.5;
-                    infoDiv.style.fontSize = `${fontSize}px`;
-                }
+                infoDiv.textContent = '';
             }
         }
 
@@ -4351,20 +4159,6 @@
                     
                     element.style.top = newTop + "px";
                     element.style.left = newLeft + "px";
-                }
-
-                // Auto-scroll logic
-                const containerRect = container.getBoundingClientRect();
-                const scrollSpeed = 10;
-                if (e.clientX > containerRect.right - 50) {
-                    container.scrollLeft += scrollSpeed;
-                } else if (e.clientX < containerRect.left + 50) {
-                    container.scrollLeft -= scrollSpeed;
-                }
-                if (e.clientY > containerRect.bottom - 50) {
-                    container.scrollTop += scrollSpeed;
-                } else if (e.clientY < containerRect.top + 50) {
-                    container.scrollTop -= scrollSpeed;
                 }
             }
 
@@ -4850,42 +4644,90 @@
             const container = document.getElementById('preview-container');
             if (!container) return;
             const wrappers = container.querySelectorAll('.thumbnail-wrapper');
-            const padding = 5; // Use a consistent padding value
+            const padding = 5;
 
             // Clear any existing absolute positioning before recalculating
             wrappers.forEach(w => {
                 w.style.position = 'relative';
                 w.style.left = '';
                 w.style.top = '';
-                w.style.marginBottom = `${padding}px`; // Apply vertical spacing
             });
 
             if (size === 'list') {
                 wrappers.forEach(wrapper => {
+                    // Reset styles for list view
+                    wrapper.style.position = 'relative';
+                    wrapper.style.left = '';
+                    wrapper.style.top = '';
                     wrapper.classList.add('list-view');
                     const thumb = wrapper.querySelector('.thumbnail');
                     if (thumb) {
-                        thumb.style.width = '128px';
+                        thumb.style.width = '128px'; // Fixed size for list view
                         thumb.style.height = '72px';
                     }
                 });
             } else {
+                // GRID VIEW LOGIC
                 wrappers.forEach(wrapper => {
                     wrapper.classList.remove('list-view');
+                    // Reset/set styles for grid view display
                     const thumb = wrapper.querySelector('.thumbnail');
-                    if (thumb) {
-                        const scale = parseFloat(size);
-                        const originalWidth = parseFloat(thumb.dataset.originalWidth || 256);
-                        thumb.style.width = (originalWidth * scale) + 'px';
-                        thumb.style.height = 'auto'; // Maintain aspect ratio
-                    }
-                    // Hide extra elements not needed in grid preview
-                    wrapper.querySelector('.thumbnail-name')?.style.display = 'none';
-                    wrapper.querySelector('.canvas-name-placeholder')?.style.display = 'none';
-                    wrapper.querySelector('.new-filename-placeholder')?.style.display = 'none';
+                    if (thumb) thumb.style.display = ''; // Reset to default display (inline)
+
+                    const nameDiv = wrapper.querySelector('.thumbnail-name');
+                    if (nameDiv) nameDiv.style.display = 'none';
+                    
+                    const canvasNamePlaceholder = wrapper.querySelector('.canvas-name-placeholder');
+                    if (canvasNamePlaceholder) canvasNamePlaceholder.style.display = 'none';
+                    const newFilenamePlaceholder = wrapper.querySelector('.new-filename-placeholder');
+                    if (newFilenamePlaceholder) newFilenamePlaceholder.style.display = 'none';
                 });
 
-                // The layout will now be handled by flexbox or inline-block based on CSS
+                const scale = parseFloat(size);
+                const containerWidth = container.clientWidth;
+                let xOffset = padding;
+                let yOffset = padding;
+                let maxRowHeight = 0;
+
+                wrappers.forEach(wrapper => {
+                    const thumb = wrapper.querySelector('.thumbnail');
+                    const nameDiv = wrapper.querySelector('.thumbnail-name');
+
+                    const originalWidth = parseFloat(thumb.dataset.originalWidth || 256);
+                    const originalHeight = parseFloat(thumb.dataset.originalHeight || 144);
+                    
+                    const scaledWidth = originalWidth * scale;
+                    const scaledHeight = originalHeight * scale;
+
+                    let nameHeight = 0;
+                    if (nameDiv) {
+                        const originalDisplay = nameDiv.style.display;
+                        nameDiv.style.display = 'block'; // Ensure it's visible for measurement
+                        nameDiv.style.maxWidth = scaledWidth + 'px';
+                        nameHeight = nameDiv.offsetHeight;
+                        nameDiv.style.display = originalDisplay;
+                    }
+
+                    const wrapperHeight = scaledHeight + nameHeight;
+
+                    if (xOffset + scaledWidth + padding > containerWidth && xOffset > padding) {
+                        xOffset = padding;
+                        yOffset += maxRowHeight + padding;
+                        maxRowHeight = 0;
+                    }
+                    
+                    wrapper.style.position = 'absolute';
+                    wrapper.style.left = xOffset + 'px';
+                    wrapper.style.top = yOffset + 'px';
+                    thumb.style.width = scaledWidth + 'px';
+                    thumb.style.height = scaledHeight + 'px';
+
+                    if (wrapperHeight > maxRowHeight) {
+                        maxRowHeight = wrapperHeight;
+                    }
+                    
+                    xOffset += scaledWidth + padding;
+                });
             }
         }
         
@@ -5085,46 +4927,11 @@
             alert('Suffixes in the "Renamed" canvas have been recalculated and compacted.');
         });
         
-        function makeModalDraggable(modalElement) {
-            let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
-            const header = modalElement.querySelector("h2");
-
-            if (header) {
-                header.onmousedown = dragMouseDown;
-            }
-
-            function dragMouseDown(e) {
-                e = e || window.event;
-                e.preventDefault();
-                pos3 = e.clientX;
-                pos4 = e.clientY;
-                document.onmouseup = closeDragElement;
-                document.onmousemove = elementDrag;
-            }
-
-            function elementDrag(e) {
-                e = e || window.event;
-                e.preventDefault();
-                pos1 = pos3 - e.clientX;
-                pos2 = pos4 - e.clientY;
-                pos3 = e.clientX;
-                pos4 = e.clientY;
-                modalElement.style.top = (modalElement.offsetTop - pos2) + "px";
-                modalElement.style.left = (modalElement.offsetLeft - pos1) + "px";
-            }
-
-            function closeDragElement() {
-                document.onmouseup = null;
-                document.onmousemove = null;
-            }
-        }
-        
-        makeModalDraggable(document.getElementById('filename-builder-modal'));
-
-
-        window.onload = init;
-        
         document.getElementById('import-project-btn').addEventListener('click', () => {
+            if (!directoryName) {
+                alert('Please load a directory first.');
+                return;
+            }
             const input = document.createElement('input');
             input.type = 'file';
             input.accept = '.json';
@@ -5136,17 +4943,18 @@
                         const projectData = JSON.parse(readerEvent.target.result);
                         // We can add more validation here, e.g., checking version
                         saveProjectData(directoryName, projectData);
-                        alert('Project data imported successfully! The page will now reload.');
+                        alert('Project data imported successfully! Reloading...');
                         location.reload();
                     } catch (err) {
-                        alert('Failed to import project data. The file may be corrupt.');
-                        console.error('Import error:', err);
+                        alert('Failed to parse project file.');
                     }
-                };
-                reader.readAsText(file, 'UTF-8');
-            };
+                }
+                reader.readAsText(file);
+            }
             input.click();
         });
+
+        window.onload = init;
 
         // --- Test hook for Playwright ---
         class MockFileHandle {
@@ -5212,26 +5020,6 @@
             try {
                 await processDirectory(rootDir);
                  console.log("processDirectory for complete dir finished");
-            } catch(e) {
-                console.error("Error in test hook processDirectory:", e);
-            }
-        });
-
-        document.getElementById('test-hook-load-orphaned-dir').addEventListener('click', async () => {
-            console.log("Test hook for orphaned directory clicked");
-            const thumbnailsDir = new MockDirectoryHandle('Thumbnails', new Map([
-                ['video1.jpg', new MockFileHandle('video1.jpg')],
-                ['orphan.jpg', new MockFileHandle('orphan.jpg')]
-            ]));
-
-            const rootDir = new MockDirectoryHandle('verification-orphaned', new Map([
-                ['video1.mp4', new MockFileHandle('video1.mp4')],
-                ['Thumbnails', thumbnailsDir]
-            ]));
-
-            try {
-                await processDirectory(rootDir);
-                 console.log("processDirectory for orphaned dir finished");
             } catch(e) {
                 console.error("Error in test hook processDirectory:", e);
             }
