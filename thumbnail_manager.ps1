@@ -239,7 +239,7 @@ if ($videosForNormalThumbnailing.Count -gt 0) {
             '-i', $videoPath,
             '-ss', '00:00:02.000',
             '-frames:v', '1',
-            '-vf', "scale=$($using:NormalThumbnailWidth):-1"
+            '-vf', "scale=$(${using:NormalThumbnailWidth}):-1"
         )
         $ffmpegArgs += $using:FfmpegQualityArgs
         $ffmpegArgs += $outputPath
@@ -295,7 +295,7 @@ if ($uniqueVideosForEdit.Count -gt 0) {
         $ffmpegArgs = @(
             '-hide_banner', '-loglevel', 'error',
             '-i', $video.FullName,
-            '-vf', "fps=1/$interval,scale=$EditThumbnailWidth:-1",
+            '-vf', "fps=1/$interval,scale=${EditThumbnailWidth}:-1",
             '-vframes', $thumbCount
         )
         $ffmpegArgs += $FfmpegQualityArgs
