@@ -201,14 +201,28 @@ if ($missingEditThumbnailFolders.Count -gt 0) {
 # 2. Process Normal Thumbnails
 $videosForNormalThumbnailing = [System.Collections.Generic.List[string]]::new()
 $videosForNormalThumbnailing.AddRange($missingNormalThumbnails)
-$incorrectNormalThumbnails | ForEach-Object {
-    $videoName = [System.IO.Path]::GetFileNameWithoutExtension($_)
-    $parentDir = (Get-Item -LiteralPath $_).Directory.Parent
-    $videoFile = Get-VideoFiles -Path $parentDir.FullName | Where-Object { $_.BaseName -eq $videoName } | Select-Object -First 1
-    if ($videoFile) {
-        $videosForNormalThumbnailing.Add($videoFile.FullName)
+
+# De-duplicate the list and process robustly to prevent errors on already-deleted files
+foreach ($thumbPath in ($incorrectNormalThumbnails | Get-Unique)) {
+    try {
+        # Check if file exists before proceeding
+        if (Test-Path -LiteralPath $thumbPath) {
+            $videoName = [System.IO.Path]::GetFileNameWithoutExtension($thumbPath)
+            $parentDir = (Get-Item -LiteralPath $thumbPath).Directory.Parent
+            $videoFile = Get-VideoFiles -Path $parentDir.FullName | Where-Object { $_.BaseName -eq $videoName } | Select-Object -First 1
+            if ($videoFile) {
+                # Ensure we don't add duplicates to the processing list
+                if (-not $videosForNormalThumbnailing.Contains($videoFile.FullName)) {
+                    $videosForNormalThumbnailing.Add($videoFile.FullName)
+                }
+            }
+            # Finally, remove the incorrect thumbnail
+            Remove-Item -Path $thumbPath -Force -ErrorAction Stop
+        }
     }
-    Remove-Item -Path $_ -Force
+    catch {
+        Write-Warning "Failed to process and remove incorrect thumbnail '$thumbPath'. It might have been deleted by another operation. Error: $($_.Exception.Message)"
+    }
 }
 
 if ($videosForNormalThumbnailing.Count -gt 0) {
