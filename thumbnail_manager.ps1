@@ -232,7 +232,8 @@ if ($videosForNormalThumbnailing.Count -gt 0) {
         $thumbnailDir = Join-Path -Path $baseDir.FullName -ChildPath "Thumbnails"
         $outputPath = Join-Path -Path $thumbnailDir -ChildPath "$baseName.jpg"
 
-        $using:syncMessages.Add(" - Creating normal thumbnail for: $baseName")
+        $localSyncMessages = $using:syncMessages
+        $localSyncMessages.Add(" - Creating normal thumbnail for: $baseName")
 
         $ffmpegArgs = @(
             '-y', '-hide_banner', '-loglevel', 'error',
