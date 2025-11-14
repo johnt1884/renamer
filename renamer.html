@@ -227,13 +227,13 @@
             display: block;
             font-size: 14px;
             color: black;
-            width: 400px; /* Fixed width */
-            min-width: 400px; /* Prevent shrinking */
-            max-width: 400px; /* Prevent growing */
+            flex: 1 1 0px; /* Grow to fill space, start from 0 */
+            min-width: 0; /* Absolutely necessary for flex-shrinking to work correctly */
             text-align: left;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
+            max-width: none; /* Override the default max-width for list view */
         }
         .new-filename-placeholder, .canvas-name-placeholder {
             display: none;
@@ -242,18 +242,16 @@
             display: block;
             font-size: 14px;
             color: #555;
-            flex: 2 1 0%;
+            flex: 0 0 auto; /* Size to content, don't grow or shrink */
             text-align: left;
             margin-left: 15px;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
-            min-width: 0;
             font-style: italic;
             border-left: 1px solid #ccc;
             padding-left: 15px;
             min-height: 20px;
-            word-break: break-all;
         }
         .thumbnail-wrapper.list-view .canvas-name-placeholder {
             display: block;
@@ -278,7 +276,7 @@
         .modal {
             display: none;
             position: fixed;
-            z-index: 1000;
+            z-index: 2500; /* Increased z-index */
             left: 0;
             top: 0;
             width: 100%;
@@ -349,6 +347,9 @@
         .landscape-row.selected-edit {
             outline: 3px dashed #DAA520; /* Darker yellow */
         }
+        .landscape-row.selected-shortcut {
+            outline: 3px dashed orange;
+        }
         .landscape-row.selected-play {
             outline: 3px solid cyan;
         }
@@ -381,11 +382,7 @@
         }
 
         #video-overlay {
-            position: absolute;
-            top: 37px; /* Height of top-bar */
-            left: 200px; /* Width of sidebar */
-            right: 0;
-            bottom: 50%;
+            position: fixed; /* Changed from absolute to fixed */
             background-color: rgba(0, 0, 0, 0.8);
             z-index: 2000;
             display: flex;
@@ -575,6 +572,8 @@
             min-width: 160px;
             box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
             z-index: 1;
+            max-height: calc(100vh - 72px); /* Full height minus top and bottom bars */
+            overflow-y: auto;
         }
 
         .dropdown-content a {
@@ -599,12 +598,11 @@
 
         .nested-dropdown-content {
             display: none;
-            position: absolute;
-            left: 100%;
-            top: 0;
+            position: fixed; /* Changed from absolute to fixed */
             background-color: #ffffff;
             min-width: 160px;
             box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+            z-index: 3000; /* Ensure it's on top of everything */
         }
 
         .sidebar-section button.selected-for-removal,
@@ -806,6 +804,10 @@
                             <label for="horizontal-padding-input" style="display: block; margin-bottom: 5px;">Horizontal Padding (px)</label>
                             <input type="number" id="horizontal-padding-input" min="0" value="10" style="width: 100%; box-sizing: border-box; background-color: #ffffff; border: 1px solid #444; color: black; padding: 4px;">
                         </div>
+                        <div style="padding: 12px 16px; border-top: 1px solid #ddd;">
+                            <label for="preview-vertical-padding-input" style="display: block; margin-bottom: 5px;">Preview Vertical Padding (px)</label>
+                            <input type="number" id="preview-vertical-padding-input" min="0" value="5" style="width: 100%; box-sizing: border-box; background-color: #ffffff; border: 1px solid #444; color: black; padding: 4px;">
+                        </div>
                         <div class="nested-dropdown" id="recent-directories-dropdown">
                             <a href="#">Recent Directories</a>
                             <div class="nested-dropdown-content" id="recent-directories-list">
@@ -815,6 +817,7 @@
                         <a href="#" id="import-project-btn">Import Project</a>
                         <a href="#" id="export-project-btn">Export Project</a>
                         <a href="#" id="recalculate-suffix-btn">Recalculate Suffix</a>
+                        <a href="#" id="information-btn">Information</a>
                     </div>
                 </div>
                 <button id="load-directory-btn">Load Directory</button>
@@ -907,7 +910,7 @@
                     <div id="list-view-button-controls" style="display: none;">
                         <button id="show-thumbnails-btn" class="list-view-toggle-btn">Show Thumbs</button>
                         <button id="show-canvas-name-btn" class="list-view-toggle-btn">Show Canvas</button>
-                        <button id="show-new-filename-btn" class="list-view-toggle-btn">Show New Name</button>
+                        <button id="show-original-filename-btn" class="list-view-toggle-btn">Show Original Name</button>
                     </div>
                 </div>
                 <div id="bottom-bar-info" style="flex-grow: 1; text-align: right;"></div>
@@ -917,6 +920,7 @@
                     <button id="landscape-rotate-btn">Landscape Rotate</button>
                     <button id="delete-btn">Delete</button>
                     <button id="edit-btn">Edit</button>
+                    <button id="shortcut-btn">Create Shortcut</button>
                     <button id="select-btn">Select</button>
                 </div>
             </div>
@@ -954,6 +958,7 @@
     <div id="video-overlay" style="display: none;">
         <div id="video-player-container">
             <video id="video-player" controls></video>
+            <div id="video-filename-display" style="text-align: center; color: white; padding-top: 10px;"></div>
             <button id="video-close-btn">X</button>
             <button id="video-prev-btn">&lt;&lt;</button>
             <button id="video-next-btn">&gt;&gt;</button>
@@ -1087,6 +1092,7 @@
                 fontSize: 14,
                 verticalPadding: 10,
                 horizontalPadding: 10,
+                previewVerticalPadding: 5,
                 customButtonTree: [],
                 collapseState: {},
                 buttonVisibility: {},
@@ -1100,7 +1106,7 @@
                 hiddenOrphans: [],
                 listViewShowThumbnails: false,
                 listViewShowCanvasName: false,
-                listViewShowNewFilename: false
+                listViewShowOriginalFilename: false
             };
 
             if (rawData) {
@@ -1174,7 +1180,7 @@
         const listViewButtonControls = document.getElementById('list-view-button-controls');
         const showThumbnailsBtn = document.getElementById('show-thumbnails-btn');
         const showCanvasNameBtn = document.getElementById('show-canvas-name-btn');
-        const showNewFilenameBtn = document.getElementById('show-new-filename-btn');
+        const showOriginalFilenameBtn = document.getElementById('show-original-filename-btn');
         const previewBtn = document.getElementById('preview-btn');
         const rightSidebar = document.getElementById('right-sidebar');
         const previewContainer = document.getElementById('preview-container');
@@ -1192,13 +1198,14 @@
         let lastCanvasIdBeforeRenamed = null;
         let allThumbnails = [];
         let currentDirHandle;
-        let landscapeSelectionMode = ''; // 'landscape' or 'landscape-rotate'
+        var landscapeSelectionMode = ''; // 'landscape' or 'landscape-rotate'
         let preEditModeCanvasMap = new Map();
-        const landscapeSelections = new Set();
-        const landscapeRotateSelections = new Set();
-        const deleteSelections = new Set();
-        const editSelections = new Set();
-        const playSelections = new Set();
+        var landscapeSelections = new Set();
+        var landscapeRotateSelections = new Set();
+        var deleteSelections = new Set();
+        var editSelections = new Set();
+        var shortcutSelections = new Set();
+        var playSelections = new Set();
         let originalPartsForCopyCheck = null;
 
         function updateSidebarActionButtonsState() {
@@ -1328,6 +1335,8 @@
             const nameDiv = thumbWrapper.querySelector('.thumbnail-name');
             const originalFilename = nameDiv ? nameDiv.dataset.originalFilename : thumbWrapper.dataset.fileName;
 
+            document.getElementById('video-filename-display').textContent = originalFilename;
+
             if (!originalFilename) {
                 console.error("Could not find an original filename for the selected thumbnail.", thumbWrapper);
                 return;
@@ -1442,7 +1451,16 @@
             recentDirectoriesDropdown.addEventListener('click', (event) => {
                 event.stopPropagation();
                 const list = document.getElementById('recent-directories-list');
-                list.style.display = list.style.display === 'block' ? 'none' : 'block';
+                const button = event.currentTarget;
+                const rect = button.getBoundingClientRect();
+
+                if (list.style.display === 'block') {
+                    list.style.display = 'none';
+                } else {
+                    list.style.display = 'block';
+                    list.style.top = `${rect.top}px`;
+                    list.style.left = `${rect.right}px`;
+                }
             });
 
             const numElementsInput = document.getElementById('num-elements-input');
@@ -1474,6 +1492,15 @@
                 saveProjectData(directoryName, projectData);
                 isLayoutFrozen = false;
                 layoutThumbnailsInGrid();
+            });
+
+            const previewVerticalPaddingInput = document.getElementById('preview-vertical-padding-input');
+            previewVerticalPaddingInput.addEventListener('change', () => {
+                const projectData = loadProjectData(directoryName);
+                projectData.previewVerticalPadding = previewVerticalPaddingInput.value;
+                saveProjectData(directoryName, projectData);
+                const currentPreviewSize = document.getElementById('preview-size-selector').value;
+                layoutPreviewPane(currentPreviewSize);
             });
 
             const horizontalPaddingInput = document.getElementById('horizontal-padding-input');
@@ -1580,6 +1607,11 @@
             updateSelectionModeButtons();
         });
 
+        document.getElementById('shortcut-btn').addEventListener('click', () => {
+            landscapeSelectionMode = landscapeSelectionMode === 'shortcut' ? '' : 'shortcut';
+            updateSelectionModeButtons();
+        });
+
         document.getElementById('select-btn').addEventListener('click', () => {
             landscapeSelectionMode = landscapeSelectionMode === 'play' ? '' : 'play';
             updateSelectionModeButtons();
@@ -1591,10 +1623,11 @@
                 landscapeRotateSelections.clear();
                 deleteSelections.clear();
                 editSelections.clear();
+                shortcutSelections.clear();
                 playSelections.clear();
 
                 document.querySelectorAll('.landscape-row').forEach(row => {
-                    row.classList.remove('selected-landscape', 'selected-landscape-rotate', 'selected-delete', 'selected-edit', 'selected-play');
+                    row.classList.remove('selected-landscape', 'selected-landscape-rotate', 'selected-delete', 'selected-edit', 'selected-shortcut', 'selected-play');
                 });
             }
         });
@@ -1606,6 +1639,7 @@
             document.getElementById('landscape-rotate-btn').style.backgroundColor = landscapeSelectionMode === 'landscape-rotate' ? red : blue;
             document.getElementById('delete-btn').style.backgroundColor = landscapeSelectionMode === 'delete' ? red : blue;
             document.getElementById('edit-btn').style.backgroundColor = landscapeSelectionMode === 'edit' ? red : blue;
+            document.getElementById('shortcut-btn').style.backgroundColor = landscapeSelectionMode === 'shortcut' ? red : blue;
             document.getElementById('select-btn').style.backgroundColor = landscapeSelectionMode === 'play' ? red : blue;
         }
 
@@ -2007,6 +2041,7 @@
             selectedThumbnails.clear();
             updatePlayButtonState();
             updateBottomBarInfo();
+            updatePreviewPanel();
         });
 
         hideBtn.addEventListener('click', () => {
@@ -2204,6 +2239,12 @@
 
 
             if (playlist.length > 0) {
+                const contentArea = document.getElementById('content-area');
+                const rect = contentArea.getBoundingClientRect();
+                videoOverlay.style.top = `${rect.top}px`;
+                videoOverlay.style.left = `${rect.left}px`;
+                videoOverlay.style.width = `${rect.width}px`;
+                videoOverlay.style.height = `${rect.height}px`;
                 videoOverlay.style.display = 'flex';
                 loadVideo(0);
             }
@@ -2289,11 +2330,12 @@
             }
             layoutThumbnailsInList();
         });
-        showNewFilenameBtn.addEventListener('click', () => {
-            showNewFilenameBtn.classList.toggle('active');
+
+        showOriginalFilenameBtn.addEventListener('click', () => {
+            showOriginalFilenameBtn.classList.toggle('active');
             if (directoryName) {
                 const projectData = loadProjectData(directoryName);
-                projectData.listViewShowNewFilename = showNewFilenameBtn.classList.contains('active');
+                projectData.listViewShowOriginalFilename = showOriginalFilenameBtn.classList.contains('active');
                 saveProjectData(directoryName, projectData);
             }
             layoutThumbnailsInList();
@@ -2305,12 +2347,11 @@
             isLayoutFrozen = false;
             const showThumbnails = showThumbnailsBtn.classList.contains('active');
             const showCanvasName = showCanvasNameBtn.classList.contains('active');
-            const showNewFilename = showNewFilenameBtn.classList.contains('active');
+            const showOriginalFilename = showOriginalFilenameBtn.classList.contains('active');
 
             const wrappers = Array.from(thumbnailContainer.querySelectorAll('.thumbnail-wrapper'));
             
-            // Sort wrappers based on the current filename (new or original)
-            // This ensures the list is always alphabetically sorted.
+            // Always sort by the current (new) filename for consistency
             wrappers.sort((a, b) => {
                 const nameA = a.dataset.fileName.toLowerCase();
                 const nameB = b.dataset.fileName.toLowerCase();
@@ -2327,22 +2368,23 @@
                 const thumb = wrapper.querySelector('.thumbnail');
                 const nameDiv = wrapper.querySelector('.thumbnail-name');
                 const canvasNamePlaceholder = wrapper.querySelector('.canvas-name-placeholder');
-                const newFilenamePlaceholder = wrapper.querySelector('.new-filename-placeholder');
+                const newFilenamePlaceholder = wrapper.querySelector('.new-filename-placeholder'); // This will now hold the original name
                 
                 const originalFilename = nameDiv.dataset.originalFilename;
                 const newFilename = wrapper.dataset.fileName;
+                const isRenamed = originalFilename !== newFilename;
 
-                if (showNewFilename) {
-                    nameDiv.textContent = originalFilename;
-                    newFilenamePlaceholder.textContent = newFilename;
-                } else {
-                    nameDiv.textContent = originalFilename;
-                    newFilenamePlaceholder.textContent = '...'; // Or some other placeholder
-                }
+                // Main display is always the new/current filename
+                nameDiv.textContent = newFilename;
+
+                // The placeholder column shows the original filename
+                newFilenamePlaceholder.textContent = originalFilename;
+
 
                 if (thumb) thumb.style.display = showThumbnails ? 'block' : 'none';
                 if (canvasNamePlaceholder) canvasNamePlaceholder.style.display = showCanvasName ? 'block' : 'none';
-                if (newFilenamePlaceholder) newFilenamePlaceholder.style.display = showNewFilename ? 'block' : 'none';
+                // The visibility of the original name is controlled by the "Show Original Name" button
+                if (newFilenamePlaceholder) newFilenamePlaceholder.style.display = showOriginalFilename ? 'block' : 'none';
             });
             updateContentSpacer();
         }
@@ -2475,6 +2517,7 @@
             document.getElementById('font-size-slider').value = projectData.fontSize;
             document.getElementById('vertical-padding-input').value = projectData.verticalPadding;
             document.getElementById('horizontal-padding-input').value = projectData.horizontalPadding;
+            document.getElementById('preview-vertical-padding-input').value = projectData.previewVerticalPadding;
 
             // --- Restore Preview Sidebar State ---
             const previewSizeSelector = document.getElementById('preview-size-selector');
@@ -2489,7 +2532,7 @@
             // --- Restore List View Toggle State ---
             showThumbnailsBtn.classList.toggle('active', projectData.listViewShowThumbnails);
             showCanvasNameBtn.classList.toggle('active', projectData.listViewShowCanvasName);
-            showNewFilenameBtn.classList.toggle('active', projectData.listViewShowNewFilename);
+            showOriginalFilenameBtn.classList.toggle('active', projectData.listViewShowOriginalFilename);
 
             loadCustomButtons(projectData.customButtonTree, projectData.collapseState, projectData.buttonVisibility);
 
@@ -2959,6 +3002,18 @@
                 }
             }
 
+            const videosToConsider = allVideoFiles.filter(f => f.customPath === '' || f.customPath === 'Landscape' || f.customPath === 'Landscape Rotate');
+            const editThumbBasenames = new Set(landscapeFiles.map(f => f.name.substring(0, f.name.lastIndexOf('_'))));
+            const videosMissingThumbs = videosToConsider.filter(vf => !editThumbBasenames.has(vf.name.substring(0, vf.name.lastIndexOf('.'))));
+
+            if (videosMissingThumbs.length > 0) {
+                if (confirm(`${videosMissingThumbs.length} video(s) are missing thumbnails in the 'Edit Thumbnails' directory. Would you like to generate a script to create them?`)) {
+                    generateEditBatchScript(videosMissingThumbs);
+                    editScriptModal.style.display = 'block';
+                    return; // Stop further rendering until the user handles the script.
+                }
+            }
+
             const groupedFiles = landscapeFiles.reduce((acc, file) => {
                 const videoName = file.name.substring(0, file.name.lastIndexOf('_'));
                 if (!acc[videoName]) {
@@ -2990,6 +3045,7 @@
                         'landscape-rotate': landscapeRotateSelections,
                         'delete': deleteSelections,
                         'edit': editSelections,
+                        'shortcut': shortcutSelections,
                         'play': playSelections
                     };
 
@@ -3016,6 +3072,7 @@
                     rowDiv.classList.toggle('selected-landscape-rotate', landscapeRotateSelections.has(videoName));
                     rowDiv.classList.toggle('selected-delete', deleteSelections.has(videoName));
                     rowDiv.classList.toggle('selected-edit', editSelections.has(videoName));
+                    rowDiv.classList.toggle('selected-shortcut', shortcutSelections.has(videoName));
                     rowDiv.classList.toggle('selected-play', playSelections.has(videoName));
                     updatePlayButtonState();
                 });
@@ -3025,6 +3082,7 @@
                 if (landscapeRotateSelections.has(videoName)) rowDiv.classList.add('selected-landscape-rotate');
                 if (deleteSelections.has(videoName)) rowDiv.classList.add('selected-delete');
                 if (editSelections.has(videoName)) rowDiv.classList.add('selected-edit');
+                if (shortcutSelections.has(videoName)) rowDiv.classList.add('selected-shortcut');
                 if (playSelections.has(videoName)) rowDiv.classList.add('selected-play');
 
                 const imageLoadPromises = files.map(file => {
@@ -3100,7 +3158,7 @@
                 'if not exist "Edit Thumbnails" mkdir "Edit Thumbnails"',
                 'echo Generating edit thumbnails and updating tracking file...',
                 '> processed_edit_mode_videos.txt (',
-                ...videoFiles.map(file => `    echo ${file.name}`),
+                ...videoFiles.map(file => `    echo "${file.name}"`),
                 ')',
                 '',
                 ...videoFiles.flatMap(file => {
@@ -3119,7 +3177,7 @@
                         'for /l %%i in (1, 1, 10) do (',
                         '    set /a "timestamp = (%%i - 1) * !interval!"',
                         `    echo   - Generating thumbnail %%i for "${fileName}" at !timestamp!s...`,
-                        `    ffmpeg -ss !timestamp! -i "${fileName}" -vframes 1 -vf "scale=256:256:force_original_aspect_ratio=decrease" -y "Edit Thumbnails\\${baseName}_%%i.jpg" >nul 2>&1 || echo Failed to generate thumbnail %%i for ${fileName}`,
+                        `    ffmpeg -ss !timestamp! -i "${fileName}" -vframes 1 -vf "scale=256:256:force_original_aspect_ratio=decrease" -y "Edit Thumbnails\\${baseName}_%%i.jpg" >nul 2>&1 || echo Failed to generate thumbnail %%i for "${fileName}"`,
                         ')'
                     ];
                 }),
@@ -3215,12 +3273,24 @@
                 editSelections.forEach(videoName => processRenamingAndThumbnails(videoName, 'move', 'Edit'));
                 scriptLines.push('');
             }
+
+            if (shortcutSelections.size > 0) {
+                scriptLines.push('Write-Host "Creating shortcuts..."');
+                scriptLines.push('if (-not (Test-Path -LiteralPath "sc")) { New-Item -ItemType Directory -Path "sc" }');
+                scriptLines.push('$wshell = New-Object -ComObject WScript.Shell');
+                shortcutSelections.forEach(videoName => {
+                    const videoFile = allVideoFiles.find(f => f.name.startsWith(videoName));
+                    if (videoFile) {
+                        const targetPath = videoFile.customPath ? `${videoFile.customPath}\\${videoFile.name}` : videoFile.name;
+                        const shortcutPath = `$PSScriptRoot\\sc\\${videoFile.name}.lnk`;
+                        scriptLines.push(`$shortcut = $wshell.CreateShortcut("${shortcutPath}")`);
+                        scriptLines.push(`$shortcut.TargetPath = Join-Path -Path $PSScriptRoot -ChildPath '${targetPath}'`);
+                        scriptLines.push(`$shortcut.Save()`);
+                    }
+                });
+                scriptLines.push('');
+            }
             
-            scriptLines.push('Write-Host "Cleaning up..."');
-            scriptLines.push('if (Test-Path -LiteralPath "Edit Thumbnails") {');
-            scriptLines.push('    Remove-Item -Recurse -Force -LiteralPath "Edit Thumbnails"');
-            scriptLines.push('}');
-            scriptLines.push('');
             
             scriptLines.push('Write-Host "Processing complete."');
             scriptLines.push('Read-Host -Prompt "Press Enter to exit"');
@@ -3731,8 +3801,7 @@
 
             function renderTree(nodes, parentContainer, level, parentPath) {
                 if (!Array.isArray(nodes)) return;
-
-                // Sort all nodes alphabetically. Special case for '+1' button to always be first.
+                
                 nodes.sort((a, b) => {
                     if (a.name === '+1') return -1;
                     if (b.name === '+1') return 1;
@@ -3767,7 +3836,12 @@
 
                             } else if (startingNode.type === 'category' && Array.isArray(startingNode.children)) {
                                 const newTextParts = [...textParts, startingNode.name];
-                                startingNode.children.forEach(child => {
+                                const sortedChildren = [...startingNode.children].sort((a, b) => {
+                                    if (a.name === '+1') return -1;
+                                    if (b.name === '+1') return 1;
+                                    return a.name.localeCompare(b.name);
+                                });
+                                sortedChildren.forEach(child => {
                                     createButtonsFromSubtree(child, basePath, newTextParts);
                                 });
                             }
@@ -3835,8 +3909,30 @@
                             checkbox.checked = buttonVisibility[startingNode.id] !== false; // Default to visible
                             
                             checkbox.onchange = () => {
-                                projectData.buttonVisibility[startingNode.id] = checkbox.checked;
+                                const buttonId = String(startingNode.id);
+                                projectData.buttonVisibility[buttonId] = checkbox.checked;
+
+                                if (!checkbox.checked) {
+                                    // If the button is being hidden, deselect it from the removal list
+                                    if (buttonsForRemoval.has(buttonId)) {
+                                        buttonsForRemoval.delete(buttonId);
+                                    }
+
+                                    // Also, deselect it from the "rename" state
+                                    const renameBtn = document.getElementById('rename-btn');
+                                    const lastClickedData = JSON.parse(renameBtn.dataset.lastClicked || 'null');
+                                    if (lastClickedData && String(lastClickedData.id) === buttonId) {
+                                        delete renameBtn.dataset.lastClicked;
+                                        updatePreviewPanel(null); // Clear the preview panel as well
+                                    }
+
+                                    updateSidebarActionButtonsState();
+                                    updateBottomBarInfo();
+                                }
+
                                 saveProjectData(directoryName, projectData);
+                                // The loadCustomButtons function will redraw the sidebar, effectively
+                                // removing the .selected-for-removal class from the now-hidden button.
                                 loadCustomButtons(projectData.customButtonTree, projectData.collapseState, projectData.buttonVisibility);
                             };
 
@@ -4098,6 +4194,18 @@
             element.addEventListener('dragstart', (e) => e.preventDefault());
             element.onmousedown = dragMouseDown;
 
+            element.addEventListener('dblclick', () => {
+                playlist = [element];
+                const contentArea = document.getElementById('content-area');
+                const rect = contentArea.getBoundingClientRect();
+                videoOverlay.style.top = `${rect.top}px`;
+                videoOverlay.style.left = `${rect.left}px`;
+                videoOverlay.style.width = `${rect.width}px`;
+                videoOverlay.style.height = `${rect.height}px`;
+                videoOverlay.style.display = 'flex';
+                loadVideo(0);
+            });
+
             function dragMouseDown(e) {
                 const isPreview = !!element.closest('#preview-container');
                 
@@ -4194,6 +4302,7 @@
                         }
                         updatePlayButtonState();
                         updateBottomBarInfo();
+                        updatePreviewPanel(); // Update preview on selection change
                     }
                 }
 
@@ -4506,6 +4615,7 @@
             });
             updatePlayButtonState();
             updateBottomBarInfo();
+            updatePreviewPanel();
             saveCanvasState();
         }
 
@@ -4588,45 +4698,48 @@
 
         function updatePreviewPanel(buttonData) {
             previewContainer.innerHTML = '';
-            if (!buttonData) {
-                return; // No button selected, so clear the panel and exit.
+            let thumbnailsToPreview = [];
+
+            if (buttonData) {
+                // If a button is provided, find all matching thumbnails across all canvases.
+                const { path, fullButtonText, specialType } = buttonData;
+                const isCategoryOnly = specialType === 'plusOne';
+                const username = projectUsernameInput.value.trim() || 'username';
+                const category = path[0];
+                const prefix = `[${username}]_${category}`;
+
+                for (const canvas of canvases.values()) {
+                    canvas.thumbnails.forEach(thumb => {
+                        const baseFilename = thumb.dataset.fileName.substring(0, thumb.dataset.fileName.lastIndexOf('.'));
+                        const filenameWithoutNumber = baseFilename.replace(/\s*\(\d+\)$/, '').trim();
+                        
+                        let matches = false;
+                        if (isCategoryOnly) {
+                             matches = filenameWithoutNumber.startsWith(prefix);
+                        } else {
+                            const expectedFilenamePart = `${prefix} ${fullButtonText}`;
+                            matches = filenameWithoutNumber.startsWith(expectedFilenamePart);
+                        }
+
+                        if (matches) {
+                            thumbnailsToPreview.push(thumb);
+                        }
+                    });
+                }
+            } else if (selectedThumbnails.size > 0) {
+                // If no button is provided, use the currently selected thumbnails.
+                thumbnailsToPreview = Array.from(selectedThumbnails);
             }
 
-            const { path, fullButtonText, specialType } = buttonData;
-            const isCategoryOnly = specialType === 'plusOne';
-            const username = projectUsernameInput.value.trim() || 'username';
-            const category = path[0];
-            const prefix = `[${username}]_${category}`;
+            thumbnailsToPreview.sort((a, b) => a.dataset.fileName.localeCompare(b.dataset.fileName));
 
-            const matchingThumbnails = [];
-            for (const canvas of canvases.values()) {
-                canvas.thumbnails.forEach(thumb => {
-                    const baseFilename = thumb.dataset.fileName.substring(0, thumb.dataset.fileName.lastIndexOf('.'));
-                    const filenameWithoutNumber = baseFilename.replace(/\s*\(\d+\)$/, '').trim();
-                    
-                    let matches = false;
-                    if (isCategoryOnly) {
-                        matches = filenameWithoutNumber === prefix;
-                    } else {
-                        const expectedFilenamePart = `${prefix} ${fullButtonText}`;
-                        matches = filenameWithoutNumber.startsWith(expectedFilenamePart);
-                    }
-
-                    if (matches) {
-                        matchingThumbnails.push(thumb);
-                    }
-                });
-            }
-
-            matchingThumbnails.sort((a, b) => a.dataset.fileName.localeCompare(b.dataset.fileName));
-
-            matchingThumbnails.forEach(thumb => {
+            thumbnailsToPreview.forEach(thumb => {
                 const clone = thumb.cloneNode(true);
                 clone.style.position = 'relative';
                 clone.style.left = 'auto';
                 clone.style.top = 'auto';
                 clone.style.marginBottom = '5px';
-                clone.classList.remove('selected');
+                clone.classList.remove('selected'); // Clones shouldn't carry over selection state
 
                 makeDraggable(clone);
                 
@@ -4644,7 +4757,9 @@
             const container = document.getElementById('preview-container');
             if (!container) return;
             const wrappers = container.querySelectorAll('.thumbnail-wrapper');
-            const padding = 5;
+            const projectData = loadProjectData(directoryName);
+            const verticalPadding = Number(projectData.previewVerticalPadding) || 5;
+            const padding = 5; // Horizontal padding remains 5
 
             // Clear any existing absolute positioning before recalculating
             wrappers.forEach(w => {
@@ -4686,7 +4801,7 @@
                 const scale = parseFloat(size);
                 const containerWidth = container.clientWidth;
                 let xOffset = padding;
-                let yOffset = padding;
+                let yOffset = verticalPadding;
                 let maxRowHeight = 0;
 
                 wrappers.forEach(wrapper => {
@@ -4712,7 +4827,7 @@
 
                     if (xOffset + scaledWidth + padding > containerWidth && xOffset > padding) {
                         xOffset = padding;
-                        yOffset += maxRowHeight + padding;
+                        yOffset += maxRowHeight + verticalPadding;
                         maxRowHeight = 0;
                     }
                     
@@ -4869,6 +4984,39 @@
             URL.revokeObjectURL(url);
         });
 
+        document.getElementById('information-btn').addEventListener('click', async () => {
+            if (!directoryName) {
+                alert('Please load a directory first.');
+                return;
+            }
+
+            let totalThumbnails = 0;
+            for (const canvas of canvases.values()) {
+                totalThumbnails += canvas.thumbnails.length;
+            }
+
+            let editModeFilesCount = 0;
+            try {
+                const editDirHandle = await currentDirHandle.getDirectoryHandle('Edit Thumbnails');
+                const uniqueVideoNames = new Set();
+                for await (const entry of editDirHandle.values()) {
+                    if (entry.kind === 'file' && entry.name.match(/\.(jpe?g|png|gif|webp)$/i)) {
+                        const videoName = entry.name.substring(0, entry.name.lastIndexOf('_'));
+                        uniqueVideoNames.add(videoName);
+                    }
+                }
+                editModeFilesCount = uniqueVideoNames.size;
+            } catch (e) {
+                // Edit Thumbnails directory doesn't exist, so the count is 0.
+            }
+
+            alert(
+                `Information:\n\n` +
+                `- Thumbnails Loaded: ${totalThumbnails}\n` +
+                `- Files in Edit Mode: ${editModeFilesCount}`
+            );
+        });
+
         function getBaseName(fileName) {
             // First, try to match the pattern with a numerical suffix like " (1)"
             const baseNameMatch = fileName.match(/^(.*) \(\d+\)\.\w+$/);
@@ -5022,6 +5170,71 @@
                  console.log("processDirectory for complete dir finished");
             } catch(e) {
                 console.error("Error in test hook processDirectory:", e);
+            }
+        });
+
+        // Test hook for missing edit thumbnails scenario
+        document.querySelector('.top-bar').insertAdjacentHTML('beforeend', '<button id="test-hook-missing-edit-thumbs" style="display:none;">Test Hook Missing Edit Thumbs</button>');
+        document.getElementById('test-hook-missing-edit-thumbs').addEventListener('click', async () => {
+            const editThumbnailsDir = new MockDirectoryHandle('Edit Thumbnails', new Map()); // Empty edit thumbs
+            const thumbnailsDir = new MockDirectoryHandle('Thumbnails', new Map([
+                ['video1.jpg', new MockFileHandle('video1.jpg')]
+            ]));
+
+            const rootDir = new MockDirectoryHandle('verification-missing-thumbs', new Map([
+                ['video1.mp4', new MockFileHandle('video1.mp4')],
+                ['Thumbnails', thumbnailsDir],
+                ['Edit Thumbnails', editThumbnailsDir]
+            ]));
+
+            try {
+                await processDirectory(rootDir);
+            } catch (e) {
+                console.error("Error in missing-thumbs test hook:", e);
+            }
+        });
+
+        // --- Test hook for the long filename truncation issue ---
+        document.querySelector('.top-bar').insertAdjacentHTML('beforeend', '<button id="test-hook-long-filename" style="display:none;">Test Hook Long Filename</button>');
+        document.getElementById('test-hook-long-filename').addEventListener('click', async () => {
+            const longFilename = '[username]_Misc (Top) (Black Logo Sleeveless Crop 1) (Bedroom 1) (Multiple) (Landscape) (1).jpg';
+            const originalFilename = 'b2 - 7554368673050365206.jpg';
+
+            const thumbnailsDir = new MockDirectoryHandle('Thumbnails', new Map([
+                [longFilename, new MockFileHandle(longFilename)]
+            ]));
+
+            const rootDir = new MockDirectoryHandle('verification-long-filename', new Map([
+                [originalFilename.replace('.jpg', '.mp4'), new MockFileHandle(originalFilename.replace('.jpg', '.mp4'))],
+                ['Thumbnails', thumbnailsDir]
+            ]));
+
+            try {
+                // Manually create a single canvas with the problematic thumbnail
+                canvases.clear();
+                const wrapper = document.createElement('div');
+                wrapper.classList.add('thumbnail-wrapper');
+                wrapper.dataset.fileName = longFilename;
+                const nameDiv = document.createElement('div');
+                nameDiv.classList.add('thumbnail-name');
+                nameDiv.textContent = longFilename;
+                nameDiv.dataset.originalFilename = originalFilename;
+                wrapper.appendChild(nameDiv);
+                 const newFilenameDiv = document.createElement('div');
+                newFilenameDiv.classList.add('new-filename-placeholder');
+                wrapper.appendChild(newFilenameDiv);
+                const canvasNameDiv = document.createElement('div');
+                canvasNameDiv.classList.add('canvas-name-placeholder');
+                wrapper.appendChild(canvasNameDiv);
+
+
+                canvases.set(1, { id: 1, name: 'Canvas 1', thumbnails: [wrapper], settings: { thumbnailSize: '1' } });
+                activeCanvasId = 1;
+                directoryName = 'verification-long-filename';
+
+                renderCanvas(1);
+            } catch(e) {
+                console.error("Error in long-filename test hook:", e);
             }
         });
         
