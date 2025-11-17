@@ -846,6 +846,8 @@
                     <option value="" disabled hidden>Sort</option>
                     <option value="name">Name</option>
                     <option value="random">Random</option>
+                    <option value="date-newest">Date (Newest First)</option>
+                    <option value="date-oldest">Date (Oldest First)</option>
                 </select>
                 <input type="text" id="layout-name-input" placeholder="Layout Name">
                 <button id="save-layout-btn">Save Layout</button>
@@ -1206,6 +1208,10 @@
         var editSelections = new Set();
         var shortcutSelections = new Set();
         var playSelections = new Set();
+var initialShortcutSelections = new Set();
+var initialLandscapeSelections = new Set();
+var initialLandscapeRotateSelections = new Set();
+var initialEditSelections = new Set();
         let originalPartsForCopyCheck = null;
 
         function updateSidebarActionButtonsState() {
@@ -2767,11 +2773,19 @@
 
                 const loadedImages = await Promise.all(imageLoadPromises);
 
+                const videoDateMap = new Map(allVideoFiles.map(f => [f.name.substring(0, f.name.lastIndexOf('.')), f.lastModified]));
                 const wrapperMap = new Map();
                 loadedImages.forEach(img => {
                     const wrapper = document.createElement('div');
                     wrapper.classList.add('thumbnail-wrapper');
                     wrapper.dataset.fileName = img.dataset.fileName;
+
+                    const thumbBasename = img.dataset.fileName.substring(0, img.dataset.fileName.lastIndexOf('.'));
+                    const lastModified = videoDateMap.get(thumbBasename);
+                    if (lastModified) {
+                        wrapper.dataset.lastModified = lastModified;
+                    }
+
                     wrapper.appendChild(img);
 
                     const nameDiv = document.createElement('div');
@@ -2993,6 +3007,33 @@
         async function renderEditMode() {
             thumbnailContainer.innerHTML = ''; // Clear container for a clean slate
             document.getElementById('landscape-buttons').style.display = 'flex'; // Ensure buttons are visible
+
+            // Pre-populate selections based on existing file locations
+            landscapeSelections = new Set(allVideoFiles.filter(f => f.customPath === 'Landscape').map(f => f.name.substring(0, f.name.lastIndexOf('.'))));
+            landscapeRotateSelections = new Set(allVideoFiles.filter(f => f.customPath === 'Landscape Rotate').map(f => f.name.substring(0, f.name.lastIndexOf('.'))));
+            editSelections = new Set(allVideoFiles.filter(f => f.customPath === 'Edit').map(f => f.name.substring(0, f.name.lastIndexOf('.'))));
+            initialLandscapeSelections = new Set(landscapeSelections);
+            initialLandscapeRotateSelections = new Set(landscapeRotateSelections);
+            initialEditSelections = new Set(editSelections);
+            shortcutSelections.clear();
+            initialShortcutSelections.clear();
+
+            try {
+                const scDirHandle = await currentDirHandle.getDirectoryHandle('sc');
+                for await (const entry of scDirHandle.values()) {
+                    if (entry.kind === 'file' && entry.name.endsWith('.lnk')) {
+                        const baseName = entry.name.substring(0, entry.name.lastIndexOf('.'));
+                        const videoFile = allVideoFiles.find(f => f.name === baseName);
+                        if (videoFile) {
+                            const videoBaseName = videoFile.name.substring(0, videoFile.name.lastIndexOf('.'));
+                            shortcutSelections.add(videoBaseName);
+                            initialShortcutSelections.add(videoBaseName);
+                        }
+                    }
+                }
+            } catch (e) {
+                // 'sc' directory likely doesn't exist, which is fine.
+            }
 
             const editDirHandle = await currentDirHandle.getDirectoryHandle('Edit Thumbnails');
             let landscapeFiles = [];
@@ -3250,35 +3291,78 @@
                 }
             };
 
-            if (landscapeSelections.size > 0) {
-                scriptLines.push('Write-Host "Moving landscape files..."');
-                landscapeSelections.forEach(videoName => processRenamingAndThumbnails(videoName, 'move', 'Landscape'));
+            // Handle moved files
+            const landscapeToAdd = [...landscapeSelections].filter(x => !initialLandscapeSelections.has(x));
+            const landscapeToRemove = [...initialLandscapeSelections].filter(x => !landscapeSelections.has(x));
+            const landscapeRotateToAdd = [...landscapeRotateSelections].filter(x => !initialLandscapeRotateSelections.has(x));
+            const landscapeRotateToRemove = [...initialLandscapeRotateSelections].filter(x => !landscapeRotateSelections.has(x));
+            const editToAdd = [...editSelections].filter(x => !initialEditSelections.has(x));
+            const editToRemove = [...initialEditSelections].filter(x => !editSelections.has(x));
+
+            if (landscapeToAdd.length > 0) {
+                scriptLines.push('Write-Host "Moving files to Landscape..."');
+                landscapeToAdd.forEach(videoName => {
+                    const videoFile = allVideoFiles.find(f => f.name.startsWith(videoName));
+                    if (videoFile) scriptLines.push(`Move-Item -LiteralPath "${videoFile.name}" -Destination "Landscape"`);
+                });
+                scriptLines.push('');
+            }
+            if (landscapeToRemove.length > 0) {
+                scriptLines.push('Write-Host "Moving files from Landscape back to root..."');
+                landscapeToRemove.forEach(videoName => {
+                    const videoFile = allVideoFiles.find(f => f.name.startsWith(videoName));
+                    if (videoFile) scriptLines.push(`Move-Item -LiteralPath "Landscape\\${videoFile.name}" -Destination "."`);
+                });
+                scriptLines.push('');
+            }
+            if (landscapeRotateToAdd.length > 0) {
+                scriptLines.push('Write-Host "Moving files to Landscape Rotate..."');
+                landscapeRotateToAdd.forEach(videoName => {
+                     const videoFile = allVideoFiles.find(f => f.name.startsWith(videoName));
+                    if (videoFile) scriptLines.push(`Move-Item -LiteralPath "${videoFile.name}" -Destination "Landscape Rotate"`);
+                });
+                scriptLines.push('');
+            }
+            if (landscapeRotateToRemove.length > 0) {
+                scriptLines.push('Write-Host "Moving files from Landscape Rotate back to root..."');
+                landscapeRotateToRemove.forEach(videoName => {
+                    const videoFile = allVideoFiles.find(f => f.name.startsWith(videoName));
+                    if (videoFile) scriptLines.push(`Move-Item -LiteralPath "Landscape Rotate\\${videoFile.name}" -Destination "."`);
+                });
                 scriptLines.push('');
             }
 
-            if (landscapeRotateSelections.size > 0) {
-                scriptLines.push('Write-Host "Processing landscape rotate files..."');
-                landscapeRotateSelections.forEach(videoName => processRenamingAndThumbnails(videoName, 'move', 'Landscape Rotate'));
+            if (editToAdd.length > 0) {
+                scriptLines.push('Write-Host "Moving files to Edit..."');
+                editToAdd.forEach(videoName => {
+                    const videoFile = allVideoFiles.find(f => f.name.startsWith(videoName));
+                    if (videoFile) scriptLines.push(`Move-Item -LiteralPath "${videoFile.name}" -Destination "Edit"`);
+                });
                 scriptLines.push('');
             }
+             if (editToRemove.length > 0) {
+                scriptLines.push('Write-Host "Moving files from Edit back to root..."');
+                editToRemove.forEach(videoName => {
+                    const videoFile = allVideoFiles.find(f => f.name.startsWith(videoName));
+                    if (videoFile) scriptLines.push(`Move-Item -LiteralPath "Edit\\${videoFile.name}" -Destination "."`);
+                });
+                scriptLines.push('');
+            }
+
 
             if (deleteSelections.size > 0) {
                 scriptLines.push('Write-Host "Deleting selected files (to Recycle Bin)..."');
                 deleteSelections.forEach(videoName => processRenamingAndThumbnails(videoName, 'delete'));
                 scriptLines.push('');
             }
+const shortcutsToAdd = [...shortcutSelections].filter(x => !initialShortcutSelections.has(x));
+            const shortcutsToRemove = [...initialShortcutSelections].filter(x => !shortcutSelections.has(x));
 
-            if (editSelections.size > 0) {
-                scriptLines.push('Write-Host "Moving files to Edit folder..."');
-                editSelections.forEach(videoName => processRenamingAndThumbnails(videoName, 'move', 'Edit'));
-                scriptLines.push('');
-            }
-
-            if (shortcutSelections.size > 0) {
+            if (shortcutsToAdd.length > 0) {
                 scriptLines.push('Write-Host "Creating shortcuts..."');
                 scriptLines.push('if (-not (Test-Path -LiteralPath "sc")) { New-Item -ItemType Directory -Path "sc" }');
                 scriptLines.push('$wshell = New-Object -ComObject WScript.Shell');
-                shortcutSelections.forEach(videoName => {
+                shortcutsToAdd.forEach(videoName => {
                     const videoFile = allVideoFiles.find(f => f.name.startsWith(videoName));
                     if (videoFile) {
                         const targetPath = videoFile.customPath ? `${videoFile.customPath}\\${videoFile.name}` : videoFile.name;
@@ -3286,6 +3370,18 @@
                         scriptLines.push(`$shortcut = $wshell.CreateShortcut("${shortcutPath}")`);
                         scriptLines.push(`$shortcut.TargetPath = Join-Path -Path $PSScriptRoot -ChildPath '${targetPath}'`);
                         scriptLines.push(`$shortcut.Save()`);
+                    }
+                });
+                scriptLines.push('');
+            }
+
+            if (shortcutsToRemove.length > 0) {
+                scriptLines.push('Write-Host "Removing shortcuts..."');
+                shortcutsToRemove.forEach(videoName => {
+                    const videoFile = allVideoFiles.find(f => f.name.startsWith(videoName));
+                    if (videoFile) {
+                        const shortcutPath = `sc\\${videoFile.name}.lnk`;
+                        scriptLines.push(`if (Test-Path -LiteralPath "${shortcutPath}") { Remove-Item -LiteralPath "${shortcutPath}" }`);
                     }
                 });
                 scriptLines.push('');
@@ -4348,6 +4444,10 @@
                 canvas.thumbnails.sort((a, b) => a.dataset.fileName.localeCompare(b.dataset.fileName));
             } else if (sortBy === 'random') {
                 canvas.thumbnails.sort(() => Math.random() - 0.5);
+            } else if (sortBy === 'date-newest') {
+                canvas.thumbnails.sort((a, b) => (b.dataset.lastModified || 0) - (a.dataset.lastModified || 0));
+            } else if (sortBy === 'date-oldest') {
+                canvas.thumbnails.sort((a, b) => (a.dataset.lastModified || 0) - (b.dataset.lastModified || 0));
             }
             renderCanvas(activeCanvasId);
             // After rendering a sorted grid, we immediately freeze it to capture positions
