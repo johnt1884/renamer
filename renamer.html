@@ -782,6 +782,7 @@
                         </div>
                         <div id="edit-mode-options" style="display:none;">
                             <a href="#" id="edit-mode-btn">Edit Mode: Off</a>
+                            <a href="#" id="generate-selections-txt-btn">Generate selections.txt</a>
                             <a href="#" id="generate-edit-bat-btn">Generate Edit Bat</a>
                         </div>
                         <a href="#" id="generate-move-rename-script-btn">Generate Move Script</a>
@@ -844,8 +845,11 @@
                 </select>
                 <select id="sort-selector">
                     <option value="" disabled hidden>Sort</option>
-                    <option value="name">Name</option>
-                    <option value="random">Random</option>
+        <option value="name-asc">Name (A-Z)</option>
+        <option value="name-desc">Name (Z-A)</option>
+        <option value="date-new">Date (Newest)</option>
+        <option value="date-old">Date (Oldest)</option>
+        <option value="random">Random</option>
                 </select>
                 <input type="text" id="layout-name-input" placeholder="Layout Name">
                 <button id="save-layout-btn">Save Layout</button>
@@ -915,6 +919,7 @@
                 </div>
                 <div id="bottom-bar-info" style="flex-grow: 1; text-align: right;"></div>
                 <div id="landscape-buttons" style="display: none;">
+                    <button id="apply-selections-btn">Apply Selections</button>
                     <button id="deselect-row-btn">Deselect</button>
                     <button id="landscape-btn">Landscape</button>
                     <button id="landscape-rotate-btn">Landscape Rotate</button>
@@ -1029,6 +1034,20 @@
                 <button>Download .ps1 File</button>
             </a>
             <button id="reload-move-rename-script-page-btn" style="display: none;">Reload Page</button>
+        </div>
+    </div>
+
+    <div id="selections-script-modal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>Generate selections.txt</h2>
+            <p>This batch script will create or update the selections.txt file in the current directory.</p>
+            <textarea id="selections-batch-script" rows="10" cols="80" readonly></textarea>
+            <button id="copy-selections-script-btn">Copy to Clipboard</button>
+            <a id="download-selections-script-link" download="generate_selections.bat">
+                <button>Download .bat File</button>
+            </a>
+            <button id="reload-selections-script-page-btn" style="display: none;">Reload Page</button>
         </div>
     </div>
 
@@ -1206,6 +1225,11 @@
         var editSelections = new Set();
         var shortcutSelections = new Set();
         var playSelections = new Set();
+        let initialLandscapeSelections = new Set();
+        let initialLandscapeRotateSelections = new Set();
+        let initialEditSelections = new Set();
+        let initialShortcutSelections = new Set();
+        let selectionsToggledOn = false;
         let originalPartsForCopyCheck = null;
 
         function updateSidebarActionButtonsState() {
@@ -1618,16 +1642,24 @@
         });
 
         document.getElementById('deselect-row-btn').addEventListener('click', () => {
-            if (confirm('Are you sure you want to deselect all rows?')) {
-                landscapeSelections.clear();
-                landscapeRotateSelections.clear();
+            if (confirm('Are you sure you want to deselect all manual selections (excluding selections from selections.txt)?')) {
+                // Clear only manual selection sets
                 deleteSelections.clear();
-                editSelections.clear();
-                shortcutSelections.clear();
                 playSelections.clear();
 
+                // Also clear landscape selections if they are not part of the toggled selections
+                if (!selectionsToggledOn) {
+                    landscapeSelections.clear();
+                    landscapeRotateSelections.clear();
+                    editSelections.clear();
+                }
+
                 document.querySelectorAll('.landscape-row').forEach(row => {
-                    row.classList.remove('selected-landscape', 'selected-landscape-rotate', 'selected-delete', 'selected-edit', 'selected-shortcut', 'selected-play');
+                    // Only remove classes for manual selections
+                    row.classList.remove('selected-delete', 'selected-play');
+                    if (!selectionsToggledOn) {
+                        row.classList.remove('selected-landscape', 'selected-landscape-rotate', 'selected-edit');
+                    }
                 });
             }
         });
@@ -2024,7 +2056,14 @@
         sortSelector.addEventListener('change', (e) => {
             const value = e.target.value;
             if (value) {
-                sortThumbnails(value);
+                const editModeBtn = document.getElementById('edit-mode-btn');
+                const inEditMode = editModeBtn && editModeBtn.textContent.includes('On');
+
+                if (inEditMode) {
+                    sortEditModeRows(value);
+                } else {
+                    sortThumbnails(value);
+                }
                 e.target.value = ''; // Reset to placeholder
             }
         });
@@ -2567,6 +2606,7 @@
                 const editModeOptions = document.getElementById('edit-mode-options');
                 const editModeBtn = document.getElementById('edit-mode-btn');
                 const generateBatBtn = document.getElementById('generate-edit-bat-btn');
+                const applySelectionsBtn = document.getElementById('apply-selections-btn');
 
                 editModeOptions.style.display = 'block';
                 
@@ -2627,6 +2667,13 @@
                     generateBatBtn.addEventListener('click', () => {
                         generateFinalBatchScript();
                         document.getElementById('final-landscape-script-modal').style.display = 'block';
+                    });
+
+                    applySelectionsBtn.addEventListener('click', applySelections);
+
+                    document.getElementById('generate-selections-txt-btn').addEventListener('click', () => {
+                        generateSelectionsTxtScript();
+                        document.getElementById('selections-script-modal').style.display = 'block';
                     });
                 }
             }
@@ -2736,9 +2783,25 @@
             // Always filter out the permanently hidden ones from the main list
             thumbnailFiles = thumbnailFiles.filter(f => !permanentlyHidden.has(f.name));
             
-            if (videosMissingThumbnails.length > 0) {
-                if (confirm(`${videosMissingThumbnails.length} video(s) are missing thumbnails. Would you like to generate a script to create them?`)) {
-                    generateBatchScript(videosMissingThumbnails, directoryName);
+            const videosToConsiderForEdit = allVideoFiles.filter(f => f.customPath === '' || f.customPath === 'Landscape' || f.customPath === 'Landscape Rotate');
+            let editThumbBasenames = new Set();
+            try {
+                const editDirHandle = await dirHandle.getDirectoryHandle('Edit Thumbnails');
+                for await (const entry of editDirHandle.values()) {
+                    if (entry.kind === 'file' && entry.name.match(/\.(jpe?g|png|gif|webp)$/i)) {
+                        editThumbBasenames.add(entry.name.substring(0, entry.name.lastIndexOf('_')));
+                    }
+                }
+            } catch (e) {
+                // Edit Thumbnails directory might not exist
+            }
+            const videosMissingEditThumbnails = videosToConsiderForEdit.filter(vf => !editThumbBasenames.has(vf.name.substring(0, vf.name.lastIndexOf('.'))));
+
+            if (videosMissingThumbnails.length > 0 || videosMissingEditThumbnails.length > 0) {
+                if (confirm(`Missing thumbnails were found. Would you like to generate a script to create them?
+- Missing regular thumbnails: ${videosMissingThumbnails.length}
+- Missing edit mode thumbnails: ${videosMissingEditThumbnails.length}`)) {
+                    generateCombinedThumbnailScript(videosMissingThumbnails, videosMissingEditThumbnails);
                     scriptModal.style.display = 'block';
                 }
             }
@@ -2779,6 +2842,13 @@
                     nameDiv.textContent = img.dataset.fileName;
                     nameDiv.dataset.originalFilename = img.dataset.fileName;
                     wrapper.appendChild(nameDiv);
+
+                    const originalThumbName = img.dataset.fileName;
+                    const thumbNameWithoutExt = originalThumbName.substring(0, originalThumbName.lastIndexOf('.'));
+                    const videoFile = allVideoFiles.find(f => f.name.substring(0, f.name.lastIndexOf('.')) === thumbNameWithoutExt);
+                    if (videoFile) {
+                        wrapper.dataset.lastModified = videoFile.lastModified;
+                    }
 
                     const newFilenameDiv = document.createElement('div');
                     newFilenameDiv.classList.add('new-filename-placeholder');
@@ -2994,6 +3064,7 @@
             thumbnailContainer.innerHTML = ''; // Clear container for a clean slate
             document.getElementById('landscape-buttons').style.display = 'flex'; // Ensure buttons are visible
 
+
             const editDirHandle = await currentDirHandle.getDirectoryHandle('Edit Thumbnails');
             let landscapeFiles = [];
             for await (const entry of editDirHandle.values()) {
@@ -3002,17 +3073,6 @@
                 }
             }
 
-            const videosToConsider = allVideoFiles.filter(f => f.customPath === '' || f.customPath === 'Landscape' || f.customPath === 'Landscape Rotate');
-            const editThumbBasenames = new Set(landscapeFiles.map(f => f.name.substring(0, f.name.lastIndexOf('_'))));
-            const videosMissingThumbs = videosToConsider.filter(vf => !editThumbBasenames.has(vf.name.substring(0, vf.name.lastIndexOf('.'))));
-
-            if (videosMissingThumbs.length > 0) {
-                if (confirm(`${videosMissingThumbs.length} video(s) are missing thumbnails in the 'Edit Thumbnails' directory. Would you like to generate a script to create them?`)) {
-                    generateEditBatchScript(videosMissingThumbs);
-                    editScriptModal.style.display = 'block';
-                    return; // Stop further rendering until the user handles the script.
-                }
-            }
 
             const groupedFiles = landscapeFiles.reduce((acc, file) => {
                 const videoName = file.name.substring(0, file.name.lastIndexOf('_'));
@@ -3191,7 +3251,146 @@
             document.getElementById('download-edit-script-link').href = URL.createObjectURL(blob);
         }
 
+        async function applySelections() {
+            const applyBtn = document.getElementById('apply-selections-btn');
+            const blue = '#1877f2';
+            const red = '#d93025';
+
+            if (selectionsToggledOn) {
+                // Toggle off
+                selectionsToggledOn = false;
+                applyBtn.style.backgroundColor = blue;
+                // Clear only the selections that were applied from the file
+                // This is a simplification; a more robust solution would store the exact selections
+                shortcutSelections.clear();
+                landscapeSelections.clear();
+                landscapeRotateSelections.clear();
+                editSelections.clear();
+            } else {
+                // Toggle on
+                try {
+                    const fileHandle = await currentDirHandle.getFileHandle('selections.txt');
+                    const file = await fileHandle.getFile();
+                    const contents = await file.text();
+                    
+                    const lines = contents.split('\n');
+                    let currentDirectory = '';
+
+                    lines.forEach(line => {
+                        const trimmedLine = line.trim();
+                        if (trimmedLine.startsWith('#')) {
+                            currentDirectory = trimmedLine.substring(1).trim().toLowerCase();
+                        } else if (trimmedLine) {
+                            let baseFilename = trimmedLine;
+                            if (currentDirectory === 'sc' && baseFilename.toLowerCase().endsWith('.lnk')) {
+                                baseFilename = baseFilename.slice(0, -4);
+                            }
+                            const videoName = baseFilename.replace(/\.[^/.]+$/, "");
+
+                            const row = thumbnailContainer.querySelector(`.landscape-row[data-video-name="${videoName}"]`);
+                            if (row) {
+                                let targetSet;
+                                switch (currentDirectory) {
+                                    case 'sc':
+                                        targetSet = shortcutSelections;
+                                        break;
+                                    case 'landscape':
+                                        targetSet = landscapeSelections;
+                                        break;
+                                    case 'landscape rotate':
+                                        targetSet = landscapeRotateSelections;
+                                        break;
+                                    case 'edit':
+                                        targetSet = editSelections;
+                                        break;
+                                }
+                                if (targetSet && !targetSet.has(videoName)) {
+                                    targetSet.add(videoName);
+                                }
+                            }
+                        }
+                    });
+                    selectionsToggledOn = true;
+                    applyBtn.style.backgroundColor = red;
+
+                    // Store initial state
+                    initialLandscapeSelections = new Set(landscapeSelections);
+                    initialLandscapeRotateSelections = new Set(landscapeRotateSelections);
+                    initialEditSelections = new Set(editSelections);
+                    initialShortcutSelections = new Set(shortcutSelections);
+
+                } catch (e) {
+                    if (e.name === 'NotFoundError') {
+                        alert('selections.txt not found. Please create it first.');
+                    } else {
+                        console.error('Failed to apply selections:', e);
+                        alert('An error occurred while applying selections. See the console for details.');
+                    }
+                    return; // Stop execution if there was an error
+                }
+            }
+
+            // Update UI based on the new selections state
+            document.querySelectorAll('.landscape-row').forEach(row => {
+                const videoName = row.dataset.videoName;
+                row.classList.toggle('selected-shortcut', shortcutSelections.has(videoName));
+                row.classList.toggle('selected-landscape', landscapeSelections.has(videoName));
+                row.classList.toggle('selected-landscape-rotate', landscapeRotateSelections.has(videoName));
+                row.classList.toggle('selected-edit', editSelections.has(videoName));
+            });
+            
+            updatePlayButtonState();
+        }
+
+        async function createOrUpdateSelectionsFile() {
+            let selectionsContent = '';
+            const subdirectories = ['Landscape', 'Landscape Rotate', 'Edit'];
+
+            for (const subdirName of subdirectories) {
+                try {
+                    const subdirHandle = await currentDirHandle.getDirectoryHandle(subdirName);
+                    selectionsContent += `# ${subdirName}\n`;
+                    const entries = [];
+                    for await (const entry of subdirHandle.values()) {
+                        entries.push(entry);
+                    }
+                    for (const entry of entries) {
+                        if (entry.kind === 'file') {
+                            selectionsContent += `${entry.name}\n`;
+                        }
+                    }
+                    selectionsContent += '\n';
+                } catch (e) {
+                    // Directory doesn't exist, which is fine.
+                }
+            }
+
+            try {
+                const fileHandle = await currentDirHandle.getFileHandle('selections.txt', { create: true });
+                const writable = await fileHandle.createWritable();
+                await writable.write(selectionsContent);
+                await writable.close();
+                alert('selections.txt has been created/updated successfully.');
+            } catch (e) {
+                console.error('Failed to write selections.txt:', e);
+                alert('There was an error writing to selections.txt. See the console for details.');
+            }
+        }
+
         function generateFinalBatchScript() {
+            // --- Calculate Diffs ---
+            const addedShortcuts = new Set([...shortcutSelections].filter(x => !initialShortcutSelections.has(x)));
+            const removedShortcuts = new Set([...initialShortcutSelections].filter(x => !shortcutSelections.has(x)));
+
+            const addedLandscapes = new Set([...landscapeSelections].filter(x => !initialLandscapeSelections.has(x)));
+            const removedLandscapes = new Set([...initialLandscapeSelections].filter(x => !landscapeSelections.has(x)));
+
+            const addedLandscapeRotates = new Set([...landscapeRotateSelections].filter(x => !initialLandscapeRotateSelections.has(x)));
+            const removedLandscapeRotates = new Set([...initialLandscapeRotateSelections].filter(x => !landscapeRotateSelections.has(x)));
+
+            const addedEdits = new Set([...editSelections].filter(x => !initialEditSelections.has(x)));
+            const removedEdits = new Set([...initialEditSelections].filter(x => !editSelections.has(x)));
+
             const scriptLines = [
                 '# PowerShell Script to process video selections',
                 'Write-Host "Creating output directories..."',
@@ -3250,15 +3449,15 @@
                 }
             };
 
-            if (landscapeSelections.size > 0) {
+            if (addedLandscapes.size > 0) {
                 scriptLines.push('Write-Host "Moving landscape files..."');
-                landscapeSelections.forEach(videoName => processRenamingAndThumbnails(videoName, 'move', 'Landscape'));
+                addedLandscapes.forEach(videoName => processRenamingAndThumbnails(videoName, 'move', 'Landscape'));
                 scriptLines.push('');
             }
 
-            if (landscapeRotateSelections.size > 0) {
+            if (addedLandscapeRotates.size > 0) {
                 scriptLines.push('Write-Host "Processing landscape rotate files..."');
-                landscapeRotateSelections.forEach(videoName => processRenamingAndThumbnails(videoName, 'move', 'Landscape Rotate'));
+                addedLandscapeRotates.forEach(videoName => processRenamingAndThumbnails(videoName, 'move', 'Landscape Rotate'));
                 scriptLines.push('');
             }
 
@@ -3268,17 +3467,17 @@
                 scriptLines.push('');
             }
 
-            if (editSelections.size > 0) {
+            if (addedEdits.size > 0) {
                 scriptLines.push('Write-Host "Moving files to Edit folder..."');
-                editSelections.forEach(videoName => processRenamingAndThumbnails(videoName, 'move', 'Edit'));
+                addedEdits.forEach(videoName => processRenamingAndThumbnails(videoName, 'move', 'Edit'));
                 scriptLines.push('');
             }
 
-            if (shortcutSelections.size > 0) {
+            if (addedShortcuts.size > 0) {
                 scriptLines.push('Write-Host "Creating shortcuts..."');
                 scriptLines.push('if (-not (Test-Path -LiteralPath "sc")) { New-Item -ItemType Directory -Path "sc" }');
                 scriptLines.push('$wshell = New-Object -ComObject WScript.Shell');
-                shortcutSelections.forEach(videoName => {
+                addedShortcuts.forEach(videoName => {
                     const videoFile = allVideoFiles.find(f => f.name.startsWith(videoName));
                     if (videoFile) {
                         const targetPath = videoFile.customPath ? `${videoFile.customPath}\\${videoFile.name}` : videoFile.name;
@@ -3286,6 +3485,64 @@
                         scriptLines.push(`$shortcut = $wshell.CreateShortcut("${shortcutPath}")`);
                         scriptLines.push(`$shortcut.TargetPath = Join-Path -Path $PSScriptRoot -ChildPath '${targetPath}'`);
                         scriptLines.push(`$shortcut.Save()`);
+                    }
+                });
+                scriptLines.push('');
+            }
+
+            // --- Handle Removals ---
+            if (removedShortcuts.size > 0) {
+                scriptLines.push('Write-Host "Removing shortcuts..."');
+                removedShortcuts.forEach(videoName => {
+                    const videoFile = allVideoFiles.find(f => f.name.startsWith(videoName));
+                    if (videoFile) {
+                        const shortcutPath = `$PSScriptRoot\\sc\\${videoFile.name}.lnk`;
+                        scriptLines.push(`if (Test-Path -LiteralPath "${shortcutPath}") { Remove-Item -LiteralPath "${shortcutPath}" }`);
+                    }
+                });
+                scriptLines.push('');
+            }
+
+            if (removedLandscapes.size > 0) {
+                scriptLines.push('Write-Host "Moving files back from Landscape..."');
+                removedLandscapes.forEach(videoName => {
+                    const videoFile = allVideoFiles.find(f => f.name.startsWith(videoName));
+                    if (videoFile) {
+                        const sourcePath = `Landscape\\${videoFile.name}`;
+                        scriptLines.push(`if (Test-Path -LiteralPath "${sourcePath}") { Move-Item -LiteralPath "${sourcePath}" -Destination "." }`);
+                        const thumbSourcePath = `Landscape\\Thumbnails\\${videoFile.name.replace(/\.[^/.]+$/, ".jpg")}`;
+                        const thumbDestPath = `Thumbnails\\${videoFile.name.replace(/\.[^/.]+$/, ".jpg")}`;
+                        scriptLines.push(`if (Test-Path -LiteralPath "${thumbSourcePath}") { Move-Item -LiteralPath "${thumbSourcePath}" -Destination "Thumbnails\\" }`);
+                    }
+                });
+                scriptLines.push('');
+            }
+
+            if (removedLandscapeRotates.size > 0) {
+                scriptLines.push('Write-Host "Moving files back from Landscape Rotate..."');
+                removedLandscapeRotates.forEach(videoName => {
+                    const videoFile = allVideoFiles.find(f => f.name.startsWith(videoName));
+                    if (videoFile) {
+                        const sourcePath = `Landscape Rotate\\${videoFile.name}`;
+                        scriptLines.push(`if (Test-Path -LiteralPath "${sourcePath}") { Move-Item -LiteralPath "${sourcePath}" -Destination "." }`);
+                         const thumbSourcePath = `Landscape Rotate\\Thumbnails\\${videoFile.name.replace(/\.[^/.]+$/, ".jpg")}`;
+                        const thumbDestPath = `Thumbnails\\${videoFile.name.replace(/\.[^/.]+$/, ".jpg")}`;
+                        scriptLines.push(`if (Test-Path -LiteralPath "${thumbSourcePath}") { Move-Item -LiteralPath "${thumbSourcePath}" -Destination "Thumbnails\\" }`);
+                    }
+                });
+                scriptLines.push('');
+            }
+
+            if (removedEdits.size > 0) {
+                scriptLines.push('Write-Host "Moving files back from Edit..."');
+                removedEdits.forEach(videoName => {
+                    const videoFile = allVideoFiles.find(f => f.name.startsWith(videoName));
+                    if (videoFile) {
+                        const sourcePath = `Edit\\${videoFile.name}`;
+                        scriptLines.push(`if (Test-Path -LiteralPath "${sourcePath}") { Move-Item -LiteralPath "${sourcePath}" -Destination "." }`);
+                        const thumbSourcePath = `Edit\\Thumbnails\\${videoFile.name.replace(/\.[^/.]+$/, ".jpg")}`;
+                        const thumbDestPath = `Thumbnails\\${videoFile.name.replace(/\.[^/.]+$/, ".jpg")}`;
+                        scriptLines.push(`if (Test-Path -LiteralPath "${thumbSourcePath}") { Move-Item -LiteralPath "${thumbSourcePath}" -Destination "Thumbnails\\" }`);
                     }
                 });
                 scriptLines.push('');
@@ -3347,6 +3604,52 @@
             location.reload();
         });
 
+        document.getElementById('selections-script-modal').querySelector('.close').addEventListener('click', () => {
+            document.getElementById('selections-script-modal').style.display = 'none';
+        });
+
+        document.getElementById('copy-selections-script-btn').addEventListener('click', () => {
+            const scriptTextArea = document.getElementById('selections-batch-script');
+            scriptTextArea.select();
+            navigator.clipboard.writeText(scriptTextArea.value).then(() => {
+                alert('Script copied to clipboard!');
+                document.getElementById('reload-selections-script-page-btn').style.display = 'inline-block';
+            });
+        });
+
+        document.getElementById('download-selections-script-link').addEventListener('click', () => {
+            document.getElementById('reload-selections-script-page-btn').style.display = 'inline-block';
+        });
+
+        document.getElementById('reload-selections-script-page-btn').addEventListener('click', () => {
+            location.reload();
+        });
+
+        function generateSelectionsTxtScript() {
+            const script = [
+                '@echo off',
+                'setlocal enabledelayedexpansion',
+                '',
+                'REM Output file',
+                'set OUT=selections.txt',
+                '> "%OUT%" echo.',
+                '',
+                'for %%F in ("sc" "Landscape" "Landscape Rotate" "Edit") do (',
+                '    echo # %%~F>> "%OUT%"',
+                '    if exist "%%~F" (',
+                '        for /f "delims=" %%A in (\'dir /b /a:-d "%%~F"\') do (',
+                '            echo %%A>> "%OUT%"',
+                '        )',
+                '    )',
+                '    echo.>> "%OUT%"',
+                ')',
+                '',
+                'echo Done. Output saved to selections.txt'
+            ].join('\r\n');
+            document.getElementById('selections-batch-script').value = script;
+            const blob = new Blob([script], { type: 'text/plain;charset=utf-8' });
+            document.getElementById('download-selections-script-link').href = URL.createObjectURL(blob);
+        }
 
         function generateMove_rename_script() {
             const scriptLines = [
@@ -3435,6 +3738,57 @@
             document.getElementById('download-move-rename-script-link').href = URL.createObjectURL(blob);
         }
 
+
+        function generateCombinedThumbnailScript(missingRegular, missingEdit) {
+            const scriptLines = ['@echo off', 'setlocal enabledelayedexpansion', 'cd /d "%~dp0"'];
+
+            if (missingRegular.length > 0) {
+                scriptLines.push(
+                    'echo Creating Thumbnails directory...',
+                    'if not exist "Thumbnails" mkdir Thumbnails',
+                    'echo Generating regular thumbnails...'
+                );
+                missingRegular.forEach(file => {
+                    const fileName = file.name;
+                    const thumbnailName = fileName.substring(0, fileName.lastIndexOf('.')) + '.jpg';
+                    scriptLines.push(`ffmpeg -y -i "${fileName}" -ss 00:00:02.000 -frames:v 1 -vf "scale=256:256:force_original_aspect_ratio=decrease" "Thumbnails\\${thumbnailName}"`);
+                });
+                scriptLines.push('echo Regular thumbnail generation complete.', '');
+            }
+
+            if (missingEdit.length > 0) {
+                scriptLines.push(
+                    'echo Creating Edit Thumbnails directory...',
+                    'if not exist "Edit Thumbnails" mkdir "Edit Thumbnails"',
+                    'echo Generating edit thumbnails...'
+                );
+                missingEdit.forEach(file => {
+                    const fileName = file.name;
+                    const baseName = fileName.substring(0, fileName.lastIndexOf('.'));
+                    scriptLines.push(
+                        `echo Processing "${fileName}"...`,
+                        `for /f "delims=" %%a in ('ffprobe -v error -show_entries format^=duration -of default^=noprint_wrappers^=1:nokey^=1 "${fileName}"') do (`,
+                        '    set "duration_str=%%a"',
+                        ')',
+                        'for /f "delims=." %%a in ("!duration_str!") do set "duration_int=%%a"',
+                        'if !duration_int! equ 0 set "duration_int=10"',
+                        'set /a "interval = !duration_int! / 10"',
+                        'if !interval! equ 0 set "interval=1"',
+                        'for /l %%i in (1, 1, 10) do (',
+                        '    set /a "timestamp = (%%i - 1) * !interval!"',
+                        `    ffmpeg -ss !timestamp! -i "${fileName}" -vframes 1 -vf "scale=256:256:force_original_aspect_ratio=decrease" -y "Edit Thumbnails\\${baseName}_%%i.jpg" >nul 2>&1`,
+                        ')'
+                    );
+                });
+                scriptLines.push('echo Edit thumbnail generation complete.', '');
+            }
+
+            scriptLines.push('echo All thumbnail generation tasks are complete.', 'pause');
+            const script = scriptLines.join('\r\n');
+            batchScriptTextArea.value = script;
+            const blob = new Blob([script], { type: 'text/plain;charset=utf-8' });
+            downloadScriptLink.href = URL.createObjectURL(blob);
+        }
 
         function generateBatchScript(videoFiles, dirName) {
             const scriptLines = [
@@ -4344,15 +4698,55 @@
 
             isLayoutFrozen = false; // Allow grid to be recalculated
 
-            if (sortBy === 'name') {
+            if (sortBy === 'name-asc') {
                 canvas.thumbnails.sort((a, b) => a.dataset.fileName.localeCompare(b.dataset.fileName));
+            } else if (sortBy === 'name-desc') {
+                canvas.thumbnails.sort((a, b) => b.dataset.fileName.localeCompare(a.dataset.fileName));
+            } else if (sortBy === 'date-new') {
+                canvas.thumbnails.sort((a, b) => (b.dataset.lastModified || 0) - (a.dataset.lastModified || 0));
+            } else if (sortBy === 'date-old') {
+                canvas.thumbnails.sort((a, b) => (a.dataset.lastModified || 0) - (b.dataset.lastModified || 0));
             } else if (sortBy === 'random') {
                 canvas.thumbnails.sort(() => Math.random() - 0.5);
             }
             renderCanvas(activeCanvasId);
             // After rendering a sorted grid, we immediately freeze it to capture positions
-            freezeLayout(); 
+            freezeLayout();
             saveCanvasState();
+        }
+
+        function sortEditModeRows(sortBy) {
+            const rows = Array.from(thumbnailContainer.querySelectorAll('.landscape-row'));
+            const videoFileMap = new Map(allVideoFiles.map(f => [f.name.substring(0, f.name.lastIndexOf('.')), f]));
+
+            rows.sort((a, b) => {
+                const videoNameA = a.dataset.videoName;
+                const videoNameB = b.dataset.videoName;
+
+                if (sortBy === 'name-asc') {
+                    return videoNameA.localeCompare(videoNameB);
+                } else if (sortBy === 'name-desc') {
+                    return videoNameB.localeCompare(videoNameA);
+                } else if (sortBy === 'random') {
+                    return Math.random() - 0.5;
+                }
+
+                const fileA = videoFileMap.get(videoNameA);
+                const fileB = videoFileMap.get(videoNameB);
+                const dateA = fileA ? fileA.lastModified : 0;
+                const dateB = fileB ? fileB.lastModified : 0;
+
+                if (sortBy === 'date-new') {
+                    return dateB - dateA;
+                } else if (sortBy === 'date-old') {
+                    return dateA - dateB;
+                }
+                return 0;
+            });
+
+            // Re-append rows in sorted order
+            rows.forEach(row => thumbnailContainer.appendChild(row));
+            layoutLandscapeThumbnails(); // Re-layout the view
         }
 
         function saveLayout() {
