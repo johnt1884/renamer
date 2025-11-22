@@ -796,7 +796,7 @@
                             <a href="#" id="generate-selections-txt-btn">Generate selections.txt</a>
                             <a href="#" id="generate-edit-bat-btn">Generate Edit Bat</a>
                         </div>
-                        <a href="#" id="generate-move-rename-script-btn">Generate Move Script</a>
+                        <a href="#" id="generate-rename-script-btn" style="display: none;">Generate Rename Script</a>
                         <div style="padding: 12px 16px; border-top: 1px solid #ddd;">
                             <label for="num-elements-input" style="display: block; margin-bottom: 5px;">Number of Elements</label>
                             <input type="number" id="num-elements-input" min="1" value="1" style="width: 100%; box-sizing: border-box; background-color: #ffffff; border: 1px solid #444; color: black; padding: 4px;">
@@ -956,11 +956,14 @@
             <h2>Create New Filename Button</h2>
             <p>Define a category and add one or more elements to create a button.</p>
 
-            <div style="margin-bottom: 15px;">
-                <label for="preset-selector" style="display: block; margin-bottom: 5px;">Load Preset:</label>
-                <select id="preset-selector" style="width: 100%; height: 36px; background-color: #fff; color: #000; border: 1px solid #444;">
-                    <option value="">-- Select a Preset --</option>
-                </select>
+            <div style="margin-bottom: 15px; display: flex; align-items: center;">
+                <div style="flex-grow: 1;">
+                    <label for="preset-selector" style="display: block; margin-bottom: 5px;">Load Preset:</label>
+                    <select id="preset-selector" style="width: 100%; height: 36px; background-color: #fff; color: #000; border: 1px solid #444;">
+                        <option value="">-- Select a Preset --</option>
+                    </select>
+                </div>
+                <button id="delete-preset-btn" style="height: 36px; margin-left: 8px; margin-top: 22px; background-color: #d93025; color: white; border: 1px solid #444; padding: 0 12px;" disabled>Delete</button>
             </div>
             
             <h4>Preview:</h4>
@@ -1051,7 +1054,7 @@
     <div id="move-rename-script-modal" class="modal">
         <div class="modal-content">
             <span class="close">&times;</span>
-            <h2>Move and Rename PowerShell Script</h2>
+            <h2>Rename PowerShell Script</h2>
             <p>This script will move and rename your files. Right-click and "Run with PowerShell" in your main video directory.</p>
             <textarea id="move-rename-batch-script" rows="10" cols="80" readonly></textarea>
             <button id="copy-move-rename-script-btn">Copy to Clipboard</button>
@@ -1308,6 +1311,12 @@
             const renamedCanvas = Array.from(canvases.values()).find(c => c.name === 'Renamed');
             if (renamedCanvas) {
                 toggleRenamedBtn.style.display = 'inline-block';
+                const generateRenameScriptBtn = document.getElementById('generate-rename-script-btn');
+                if (renamedCanvas.thumbnails.length > 0) {
+                    generateRenameScriptBtn.style.display = 'block';
+                } else {
+                    generateRenameScriptBtn.style.display = 'none';
+                }
             } else {
                 toggleRenamedBtn.style.display = 'none';
             }
@@ -3668,8 +3677,8 @@
             location.reload();
         });
 
-        document.getElementById('generate-move-rename-script-btn').addEventListener('click', () => {
-            generateMove_rename_script();
+        document.getElementById('generate-rename-script-btn').addEventListener('click', () => {
+            generateRenameScript();
             document.getElementById('move-rename-script-modal').style.display = 'block';
         });
 
@@ -3741,91 +3750,121 @@
             document.getElementById('download-selections-script-link').href = URL.createObjectURL(blob);
         }
 
-        function generateMove_rename_script() {
-            const scriptLines = [
-                '# PowerShell Script to move and rename files',
-                'Write-Host "Processing files..."',
-                ''
-            ];
-
-            const escapeString = (str) => `'${str.replace(/'/g, "''")}'`;
+        function generateRenameScript() {
             const renamedCanvas = Array.from(canvases.values()).find(c => c.name === 'Renamed');
-
-            if (renamedCanvas) {
-                const thumbnailsInRenamed = renamedCanvas.thumbnails;
-                const groupedByBaseName = new Map();
-                
-                thumbnailsInRenamed.forEach(thumb => {
-                    const newName = thumb.dataset.fileName;
-                    if (!newName) return;
-                    const baseName = newName.replace(/ \(\d+\)$/, '');
-                    if (!groupedByBaseName.has(baseName)) {
-                        groupedByBaseName.set(baseName, []);
-                    }
-                    groupedByBaseName.get(baseName).push(thumb);
-                });
-
-                const finalRenames = new Map();
-                for (const [baseName, thumbnails] of groupedByBaseName.entries()) {
-                    thumbnails.sort((a, b) => {
-                        const numA = parseInt((a.dataset.fileName.match(/ \((\d+)\)$/) || [])[1] || 0, 10);
-                        const numB = parseInt((b.dataset.fileName.match(/ \((\d+)\)$/) || [])[1] || 0, 10);
-                        if (numA !== numB) return numA - numB;
-                        const originalA = a.querySelector('.thumbnail-name').dataset.originalFilename;
-                        const originalB = b.querySelector('.thumbnail-name').dataset.originalFilename;
-                        return originalA.localeCompare(originalB);
-                    });
-
-                    let counter = 1;
-                    thumbnails.forEach(thumb => {
-                        const finalNewName = `${baseName} (${counter})`;
-                        finalRenames.set(thumb.dataset.fileName, finalNewName);
-                        counter++;
-                    });
-                }
-                
-                thumbnailsInRenamed.forEach(thumb => {
-                    const originalThumbName = thumb.querySelector('.thumbnail-name').dataset.originalFilename;
-                    const newThumbName = finalRenames.get(thumb.dataset.fileName);
-                    
-                    const originalVideoName = originalThumbName.replace(/\.jpg$/, '.mp4');
-                    const videoFile = allVideoFiles.find(f => f.name === originalVideoName);
-
-                    if (videoFile) {
-                        const originalPathPrefix = videoFile.customPath ? `${videoFile.customPath}\\` : '';
-                        const originalVideoPath = originalPathPrefix + originalVideoName;
-                        const originalThumbPath = `Thumbnails\\${originalThumbName}`; // Assuming root thumbnails for simplicity, needs adjustment if thumbs are in subdirs
-                        const subDirThumbPath = videoFile.customPath ? `${videoFile.customPath}\\Thumbnails\\${originalThumbName}` : '';
-                        
-                        const newVideoName = newThumbName.replace(/\.jpg$/, '.mp4');
-
-                        // 1. Move the video file to the root directory first, if it's in a subdirectory
-                        if (videoFile.customPath) {
-                            scriptLines.push(`if (Test-Path -LiteralPath ${escapeString(originalVideoPath)}) { Move-Item -LiteralPath ${escapeString(originalVideoPath)} -Destination "." }`);
-                        }
-
-                        // 2. Rename the video file in the root directory
-                        scriptLines.push(`if (Test-Path -LiteralPath ${escapeString(originalVideoName)}) { Rename-Item -LiteralPath ${escapeString(originalVideoName)} -NewName ${escapeString(newVideoName)} }`);
-                        
-                        // 3. Move and rename the corresponding thumbnail
-                        if (subDirThumbPath) {
-                            scriptLines.push(`if (Test-Path -LiteralPath ${escapeString(subDirThumbPath)}) { Move-Item -LiteralPath ${escapeString(subDirThumbPath)} -Destination "Thumbnails\\" }`);
-                        }
-                        scriptLines.push(`if (Test-Path -LiteralPath ${escapeString(originalThumbPath)}) { Rename-Item -LiteralPath ${escapeString(originalThumbPath)} -NewName ${escapeString(newThumbName)} }`);
-
-                        scriptLines.push(''); // Add a blank line for readability
-                    }
-                });
+            if (!renamedCanvas) {
+                alert('Could not find the "Renamed" canvas.');
+                return;
             }
 
-            scriptLines.push('');
-            scriptLines.push('Write-Host "Processing complete."');
-            scriptLines.push('Read-Host -Prompt "Press Enter to exit"');
+            const escapeString = (str) => `'${str.replace(/'/g, "''")}'`;
 
-            const script = scriptLines.join('\r\n');
+            const renameActions = [];
+            const undoActions = [];
+            const filesWithNoTitle = [];
+
+            const thumbnailsInRenamed = renamedCanvas.thumbnails;
+            thumbnailsInRenamed.forEach(thumb => {
+                const originalThumbName = thumb.querySelector('.thumbnail-name').dataset.originalFilename;
+                const newThumbName = thumb.dataset.fileName;
+                const videoFile = allVideoFiles.find(f => f.name.replace(/\.[^/.]+$/, ".jpg") === originalThumbName);
+
+                if (videoFile) {
+                    const originalVideoName = videoFile.name;
+                    const newVideoExtension = originalVideoName.substring(originalVideoName.lastIndexOf('.'));
+                    const newVideoName = newThumbName.replace(/\.[^/.]+$/, newVideoExtension);
+
+                    // --- Prepare UNDO command ---
+                    undoActions.push(`if (Test-Path -LiteralPath ${escapeString(newVideoName)}) { Rename-Item -LiteralPath ${escapeString(newVideoName)} -NewName ${escapeString(originalVideoName)} -ErrorAction SilentlyContinue }`);
+
+                    // --- Prepare RENAME commands ---
+                    const currentRenameCommands = [];
+                    // 1. Move from subdir if necessary
+                    if (videoFile.customPath) {
+                        const originalFullPath = `${videoFile.customPath}\\${originalVideoName}`;
+                        currentRenameCommands.push(`if (Test-Path -LiteralPath ${escapeString(originalFullPath)}) { Move-Item -LiteralPath ${escapeString(originalFullPath)} -Destination "." }`);
+                    }
+                    
+                    // 2. Rename the video file
+                    currentRenameCommands.push(`if (Test-Path -LiteralPath ${escapeString(originalVideoName)}) { Rename-Item -LiteralPath ${escapeString(originalVideoName)} -NewName ${escapeString(newVideoName)} }`);
+
+                    // 3. Extract and set title metadata
+                    const titleRegex = / - (\d+)\./;
+                    const match = originalVideoName.match(titleRegex);
+                    if (match && match[1]) {
+                        const title = match[1];
+                        currentRenameCommands.push(`try {`);
+                        currentRenameCommands.push(`    $file = $folder.ParseName(${escapeString(newVideoName)})`);
+                        currentRenameCommands.push(`    $file.ExtendedProperty("Title") = "${title}"`);
+                        currentRenameCommands.push(`} catch { Write-Warning "Could not set title for ${newVideoName}" }`);
+                    } else {
+                        filesWithNoTitle.push(newVideoName);
+                    }
+                    renameActions.push(currentRenameCommands.join('\r\n'));
+                }
+            });
+
+            const summarySection = `
+                Write-Host "Renaming process complete." -ForegroundColor Green
+                ${filesWithNoTitle.length > 0 ? `
+                Write-Host "\\nCould not find a title ID for the following files:" -ForegroundColor Yellow
+                ${filesWithNoTitle.map(f => `'${f}'`).join('\r\n')}
+                ` : ''}
+            `;
+
+            const script = `
+function Show-Menu {
+    param (
+        [string]$Title = 'Rename Script'
+    )
+    Clear-Host
+    Write-Host "================ $Title ================"
+    Write-Host
+    Write-Host "1. Press '1' to Rename Files"
+    Write-Host "2. Press '2' to Undo Renaming"
+    Write-Host "Q. Press 'Q' to quit"
+    Write-Host
+}
+
+$RenameScriptBlock = {
+    Write-Host "--- Starting Rename Files ---"
+    try {
+        $shell = New-Object -ComObject Shell.Application
+        $folder = $shell.Namespace($PSScriptRoot)
+    } catch {
+        Write-Error "Could not create Shell.Application COM object. Metadata will not be updated."
+        $folder = $null
+    }
+
+    ${renameActions.join('\r\n\r\n')}
+
+    ${summarySection}
+    Read-Host -Prompt "Press Enter to return to the menu"
+}
+
+$UndoScriptBlock = {
+    Write-Host "--- Starting Undo Renaming ---"
+    ${undoActions.join('\r\n')}
+    Write-Host "Undo process complete."
+    Read-Host -Prompt "Press Enter to return to the menu"
+}
+
+do {
+    Show-Menu
+    $selection = Read-Host -Prompt "Please make a selection"
+    switch ($selection) {
+        '1' { Invoke-Command -ScriptBlock $RenameScriptBlock }
+        '2' { Invoke-Command -ScriptBlock $UndoScriptBlock }
+        'q' { return }
+    }
+} until ($selection -eq 'q')
+            `.trim();
+
             document.getElementById('move-rename-batch-script').value = script;
             const blob = new Blob([script], { type: 'text/plain;charset=utf-8' });
-            document.getElementById('download-move-rename-script-link').href = URL.createObjectURL(blob);
+            const downloadLink = document.getElementById('download-move-rename-script-link');
+            downloadLink.href = URL.createObjectURL(blob);
+            downloadLink.download = 'rename_script.ps1';
         }
 
 
@@ -4099,8 +4138,31 @@
 
         document.getElementById('add-element-btn').addEventListener('click', () => addFilenamePart());
 
+        document.getElementById('delete-preset-btn').addEventListener('click', () => {
+            const presetSelector = document.getElementById('preset-selector');
+            const presetName = presetSelector.value;
+            if (!presetName) {
+                alert("Please select a preset to delete.");
+                return;
+            }
+
+            if (confirm(`Are you sure you want to delete the preset "${presetName}"?`)) {
+                let presets = JSON.parse(localStorage.getItem('buttonPresets') || '[]');
+                presets = presets.filter(p => p.name !== presetName);
+                localStorage.setItem('buttonPresets', JSON.stringify(presets));
+
+                // Reset the form and dropdown
+                populatePresetSelector();
+                initializeFilenameBuilder();
+                document.getElementById('delete-preset-btn').disabled = true;
+            }
+        });
+
         document.getElementById('preset-selector').addEventListener('change', (e) => {
             const presetName = e.target.value;
+            const deleteBtn = document.getElementById('delete-preset-btn');
+            deleteBtn.disabled = !presetName;
+
             if (!presetName) return;
 
             const presets = JSON.parse(localStorage.getItem('buttonPresets') || '[]');
