@@ -592,6 +592,17 @@
             color: #ffffff;
         }
 
+        #edit-dropdown-content {
+            display: none;
+            position: absolute;
+            bottom: 100%; /* Position above the button */
+            background-color: #ffffff;
+            color: #000000;
+            min-width: 160px;
+            box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+            z-index: 1;
+        }
+
         .nested-dropdown {
             position: relative;
         }
@@ -904,7 +915,14 @@
                 <div style="display: flex;" id="bottom-bar-left-controls">
                     <button id="new-filename-btn" style="height: 36px; padding: 0; width: 60px; text-align: center; border: 1px solid #444444; background-color: #1877f2; color: #ffffff; border-radius: 0; font-size: 14px; box-sizing: border-box; cursor: pointer;">New</button>
                     <button id="remove-btn" style="height: 36px; padding: 0 12px; border: 1px solid #444444; border-left: none; background-color: #1877f2; color: #ffffff; border-radius: 0; font-size: 14px; box-sizing: border-box; cursor: pointer;">Remove</button>
-                    <button id="copy-button-btn" style="height: 36px; padding: 0 12px; border: 1px solid #444444; border-left: none; background-color: #1877f2; color: #ffffff; border-radius: 0; font-size: 14px; box-sizing: border-box; cursor: pointer;" disabled>Copy</button>
+                    <div class="dropdown">
+                        <button id="edit-dropdown-btn" style="height: 36px; padding: 0 12px; border: 1px solid #444444; border-left: none; background-color: #1877f2; color: #ffffff; border-radius: 0; font-size: 14px; box-sizing: border-box; cursor: pointer;" disabled>Actions</button>
+                        <div class="dropdown-content" id="edit-dropdown-content">
+                            <a href="#" id="copy-button-btn">Copy</a>
+                            <a href="#" id="edit-button-btn">Edit</a>
+                            <a href="#" id="save-preset-btn">Save Preset</a>
+                        </div>
+                    </div>
                     <button id="rename-btn" style="height: 36px; padding: 0 12px; border: 1px solid #444444; border-left: none; background-color: #1877f2; color: #ffffff; border-radius: 0; font-size: 14px; box-sizing: border-box; cursor: pointer;" disabled>Rename</button>
                     <button id="toggle-renamed-canvas-btn" style="height: 36px; padding: 0 12px; border: 1px solid #444444; border-left: none; background-color: #1877f2; color: #ffffff; border-radius: 0; font-size: 14px; box-sizing: border-box; cursor: pointer; display: none;">Toggle Renamed</button>
                     <div id="writing-element-controls" style="display: flex; align-items: center; border: 1px solid #444; border-left: none; padding: 0 5px;">
@@ -937,6 +955,13 @@
             <span class="close">&times;</span>
             <h2>Create New Filename Button</h2>
             <p>Define a category and add one or more elements to create a button.</p>
+
+            <div style="margin-bottom: 15px;">
+                <label for="preset-selector" style="display: block; margin-bottom: 5px;">Load Preset:</label>
+                <select id="preset-selector" style="width: 100%; height: 36px; background-color: #fff; color: #000; border: 1px solid #444;">
+                    <option value="">-- Select a Preset --</option>
+                </select>
+            </div>
             
             <h4>Preview:</h4>
             <div id="filename-preview"></div>
@@ -1186,6 +1211,8 @@
         const newFilenameBtn = document.getElementById('new-filename-btn');
         const removeBtn = document.getElementById('remove-btn');
         const renameBtn = document.getElementById('rename-btn');
+        const editDropdownBtn = document.getElementById('edit-dropdown-btn');
+        const editDropdownContent = document.getElementById('edit-dropdown-content');
         const visibleButtonsBtn = document.getElementById('visible-buttons-btn');
         const visibleButtonsModal = document.getElementById('visible-buttons-modal');
         const visibleButtonsListContainer = document.getElementById('visible-buttons-list-container');
@@ -1234,16 +1261,16 @@
 
         function updateSidebarActionButtonsState() {
             const numSelected = buttonsForRemoval.size;
-            const copyBtn = document.getElementById('copy-button-btn');
+            const editDropdownBtn = document.getElementById('edit-dropdown-btn');
 
             // Remove button state
             removeBtn.disabled = numSelected === 0;
             removeBtn.classList.toggle('disabled-btn', numSelected === 0);
 
-            // Copy button state
-            if (copyBtn) {
-                copyBtn.disabled = numSelected !== 1;
-                copyBtn.classList.toggle('disabled-btn', numSelected !== 1);
+            // Edit dropdown button state
+            if (editDropdownBtn) {
+                editDropdownBtn.disabled = numSelected !== 1;
+                editDropdownBtn.classList.toggle('disabled-btn', numSelected !== 1);
             }
         }
 
@@ -1465,27 +1492,64 @@
             loadRecentDirectories();
             updateSidebarActionButtonsState();
 
+
             document.getElementById('copy-button-btn').addEventListener('click', () => {
                 if (buttonsForRemoval.size === 1) {
                     const buttonId = buttonsForRemoval.values().next().value;
-                    openButtonEditor(buttonId);
+                    openButtonEditor(buttonId, false); // false for copy
                 }
             });
 
-            recentDirectoriesDropdown.addEventListener('click', (event) => {
-                event.stopPropagation();
-                const list = document.getElementById('recent-directories-list');
-                const button = event.currentTarget;
-                const rect = button.getBoundingClientRect();
+            document.getElementById('edit-button-btn').addEventListener('click', () => {
+                if (buttonsForRemoval.size === 1) {
+                    const buttonId = buttonsForRemoval.values().next().value;
+                    openButtonEditor(buttonId, true); // true for edit
+                }
+            });
 
-                if (list.style.display === 'block') {
-                    list.style.display = 'none';
+            document.getElementById('save-preset-btn').addEventListener('click', () => {
+                if (buttonsForRemoval.size !== 1) {
+                    alert("Please select exactly one button to save as a preset.");
+                    return;
+                }
+                const buttonId = buttonsForRemoval.values().next().value;
+                const projectData = loadProjectData(directoryName);
+                const { button, path } = findButtonPathById(projectData.customButtonTree, buttonId);
+
+                if (!button || !path) {
+                    alert("Could not find the selected button's data.");
+                    return;
+                }
+
+                const presetName = prompt("Enter a name for this preset:", path.join(' - '));
+                if (!presetName || presetName.trim() === '') {
+                    return; // User cancelled
+                }
+
+                const presets = JSON.parse(localStorage.getItem('buttonPresets') || '[]');
+                const existingPresetIndex = presets.findIndex(p => p.name === presetName);
+
+                if (existingPresetIndex > -1) {
+                    if (!confirm(`A preset named "${presetName}" already exists. Overwrite it?`)) {
+                        return;
+                    }
+                }
+
+                const presetData = {
+                    name: presetName.trim(),
+                    path: path
+                };
+
+                if (existingPresetIndex > -1) {
+                    presets[existingPresetIndex] = presetData;
                 } else {
-                    list.style.display = 'block';
-                    list.style.top = `${rect.top}px`;
-                    list.style.left = `${rect.right}px`;
+                    presets.push(presetData);
                 }
+
+                localStorage.setItem('buttonPresets', JSON.stringify(presets));
+                alert(`Preset "${presetName}" saved successfully!`);
             });
+
 
             const numElementsInput = document.getElementById('num-elements-input');
             numElementsInput.addEventListener('change', () => {
@@ -1573,12 +1637,6 @@
         // Prevent clicks inside the dropdown from closing it
         document.getElementById('cog-dropdown').addEventListener('click', (event) => {
             event.stopPropagation();
-        });
-
-        thumbnailsMenu.addEventListener('click', (event) => {
-            event.stopPropagation();
-            const list = document.getElementById('thumbnails-menu-list');
-            list.style.display = list.style.display === 'block' ? 'none' : 'block';
         });
 
         generateEditThumbnailsBtn.addEventListener('click', () => {
@@ -2320,6 +2378,38 @@
             if (currentPlaylistIndex < playlist.length - 1) {
                 loadVideo(currentPlaylistIndex + 1);
             }
+        });
+
+        editDropdownBtn.addEventListener('click', (event) => {
+            event.stopPropagation();
+            editDropdownContent.style.display = editDropdownContent.style.display === 'block' ? 'none' : 'block';
+        });
+
+        document.addEventListener('click', () => {
+            if (editDropdownContent.style.display === 'block') {
+                editDropdownContent.style.display = 'none';
+            }
+        });
+
+        recentDirectoriesDropdown.addEventListener('click', (event) => {
+            event.stopPropagation();
+            const list = document.getElementById('recent-directories-list');
+            const button = event.currentTarget;
+            const rect = button.getBoundingClientRect();
+
+            if (list.style.display === 'block') {
+                list.style.display = 'none';
+            } else {
+                list.style.display = 'block';
+                list.style.top = `${rect.top}px`;
+                list.style.left = `${rect.right}px`;
+            }
+        });
+
+        thumbnailsMenu.addEventListener('click', (event) => {
+            event.stopPropagation();
+            const list = document.getElementById('thumbnails-menu-list');
+            list.style.display = list.style.display === 'block' ? 'none' : 'block';
         });
 
         thumbnailContainer.addEventListener('mousedown', startSelection);
@@ -4009,7 +4099,31 @@
 
         document.getElementById('add-element-btn').addEventListener('click', () => addFilenamePart());
 
-        function openButtonEditor(buttonId) {
+        document.getElementById('preset-selector').addEventListener('change', (e) => {
+            const presetName = e.target.value;
+            if (!presetName) return;
+
+            const presets = JSON.parse(localStorage.getItem('buttonPresets') || '[]');
+            const preset = presets.find(p => p.name === presetName);
+
+            if (preset && preset.path) {
+                const [category, ...elements] = preset.path;
+                filenameParts = [
+                    { type: 'category', value: category || '' },
+                    ...elements.map(el => ({ type: 'element', value: el }))
+                ];
+                
+                // If there are no elements after loading, add one empty element field
+                if (filenameParts.length === 1) {
+                    filenameParts.push({ type: 'element', value: '' });
+                }
+
+                renderFilenameParts();
+                updateFilenamePreview();
+            }
+        });
+
+        function openButtonEditor(buttonId, isEditMode) {
             const projectData = loadProjectData(directoryName);
             const { button, path } = findButtonPathById(projectData.customButtonTree, buttonId);
 
@@ -4018,23 +4132,28 @@
                 return;
             }
 
-            const elements = path.slice(1); 
+            const elements = path.slice(1);
 
             filenameParts = [
                 { type: 'category', value: path[0] || '' },
                 ...elements.map(el => ({ type: 'element', value: el }))
             ];
             
-            // Store the original state for the copy-on-no-change logic
             originalPartsForCopyCheck = JSON.stringify(filenameParts);
 
             renderFilenameParts();
             updateFilenamePreview();
 
-            // When copying, we are creating a NEW button, so the ID should be empty.
-            document.getElementById('editing-button-id').value = '';
-            createFilenameButtonBtn.textContent = 'Add Button';
+            if (isEditMode) {
+                document.getElementById('editing-button-id').value = buttonId;
+                createFilenameButtonBtn.textContent = 'Update Button';
+            } else {
+                document.getElementById('editing-button-id').value = '';
+                createFilenameButtonBtn.textContent = 'Add Button';
+            }
+
             document.getElementById('clone-filename-button-btn').style.display = 'none';
+            populatePresetSelector();
             filenameBuilderModal.style.display = 'block';
         }
 
@@ -4487,9 +4606,23 @@
             button.style.fontSize = `${fontSize}px`;
         }
 
+        function populatePresetSelector() {
+            const presetSelector = document.getElementById('preset-selector');
+            presetSelector.innerHTML = '<option value="">-- Select a Preset --</option>';
+            const presets = JSON.parse(localStorage.getItem('buttonPresets') || '[]');
+            presets.sort((a, b) => a.name.localeCompare(b.name));
+            presets.forEach(preset => {
+                const option = document.createElement('option');
+                option.value = preset.name;
+                option.textContent = preset.name;
+                presetSelector.appendChild(option);
+            });
+        }
+
         newFilenameBtn.addEventListener('click', () => {
             filenameBuilderModal.style.display = 'block';
             initializeFilenameBuilder();
+            populatePresetSelector();
             // Reset to "create" mode
             document.getElementById('editing-button-id').value = '';
             createFilenameButtonBtn.textContent = 'Add Button';
