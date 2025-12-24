@@ -791,9 +791,9 @@
                                 <a href="#" id="generate-edit-thumbnails-new-btn">Generate Thumbnails for Edit Mode for New Files</a>
                             </div>
                         </div>
+                        <a href="#" id="shortcut-mode-btn">Shortcut Mode</a>
                         <div id="edit-mode-options" style="display:none;">
                             <a href="#" id="edit-mode-btn">Edit Mode: Off</a>
-                            <a href="#" id="shortcut-mode-btn">Shortcut Mode</a>
                             <a href="#" id="generate-selections-txt-btn">Generate selections.txt</a>
                             <a href="#" id="generate-edit-bat-btn">Generate Edit Bat</a>
                         </div>
@@ -2677,6 +2677,15 @@
 
             const projectData = loadProjectData(directoryName);
 
+            const shortcutModeBtn = document.getElementById('shortcut-mode-btn');
+            if (!shortcutModeBtn.dataset.listenerAttached) {
+                shortcutModeBtn.dataset.listenerAttached = 'true';
+                shortcutModeBtn.addEventListener('click', async () => {
+                    isShortcutMode = true;
+                    await renderShortcutMode();
+                });
+            }
+
             projectUsernameInput.value = projectData.projectUsername;
             document.getElementById('num-elements-input').value = projectData.numElements;
             document.getElementById('font-size-slider').value = projectData.fontSize;
@@ -2731,7 +2740,6 @@
             if (hasEditThumbnails) {
                 const editModeOptions = document.getElementById('edit-mode-options');
                 const editModeBtn = document.getElementById('edit-mode-btn');
-                const shortcutModeBtn = document.getElementById('shortcut-mode-btn');
                 const generateBatBtn = document.getElementById('generate-edit-bat-btn');
                 const applySelectionsBtn = document.getElementById('apply-selections-btn');
                 const generateShortcutScriptBtn = document.getElementById('generate-shortcut-script-btn');
@@ -2746,14 +2754,8 @@
                 // --- Attach listeners only once ---
                 if (!editModeBtn.dataset.listenerAttached) {
                     editModeBtn.dataset.listenerAttached = 'true';
-                    shortcutModeBtn.dataset.listenerAttached = 'true';
                     generateBatBtn.dataset.listenerAttached = 'true';
                     generateShortcutScriptBtn.dataset.listenerAttached = 'true';
-
-                    shortcutModeBtn.addEventListener('click', async () => {
-                        isShortcutMode = true;
-                        await renderShortcutMode();
-                    });
 
                     generateShortcutScriptBtn.addEventListener('click', () => {
                         generateShortcutScript();
