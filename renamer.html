@@ -3236,21 +3236,18 @@
                         }
                     }
 
-                    let newestShortcutDate = 0;
-                    let scDirExists = true;
-
+                    const existingShortcutBaseNames = new Set();
                     try {
                         const scDirHandle = await subDirHandle.getDirectoryHandle('sc');
                         for await (const shortcutEntry of scDirHandle.values()) {
-                            if (shortcutEntry.kind === 'file') {
-                                const file = await shortcutEntry.getFile();
-                                if (file.lastModified > newestShortcutDate) {
-                                    newestShortcutDate = file.lastModified;
-                                }
+                            if (shortcutEntry.kind === 'file' && shortcutEntry.name.endsWith('.lnk')) {
+                                const videoFullName = shortcutEntry.name.slice(0, -4);
+                                const videoBaseName = videoFullName.substring(0, videoFullName.lastIndexOf('.'));
+                                existingShortcutBaseNames.add(videoBaseName);
                             }
                         }
                     } catch (e) {
-                        scDirExists = false; // sc folder doesn't exist, so all thumbs are new
+                        // sc folder doesn't exist, which is fine. The set will be empty.
                     }
 
                     try {
@@ -3264,12 +3261,12 @@
                         thumbnailContainer.appendChild(header);
                         yOffset += 30;
 
-                        let filesToProcess = [];
+                        const filesToProcess = [];
                         for await (const thumbEntry of editThumbsDirHandle.values()) {
                              if (thumbEntry.kind === 'file' && thumbEntry.name.match(/\.(jpe?g|png|gif|webp)$/i)) {
-                                const file = await thumbEntry.getFile();
-                                if (file.lastModified > newestShortcutDate) {
-                                    filesToProcess.push(file);
+                                const videoBaseName = thumbEntry.name.substring(0, thumbEntry.name.lastIndexOf('_'));
+                                if (!existingShortcutBaseNames.has(videoBaseName)) {
+                                    filesToProcess.push(await thumbEntry.getFile());
                                 }
                             }
                         }
