@@ -793,6 +793,7 @@
                         </div>
                         <div id="edit-mode-options" style="display:none;">
                             <a href="#" id="edit-mode-btn">Edit Mode: Off</a>
+                            <a href="#" id="shortcut-mode-btn">Shortcut Mode</a>
                             <a href="#" id="generate-selections-txt-btn">Generate selections.txt</a>
                             <a href="#" id="generate-edit-bat-btn">Generate Edit Bat</a>
                         </div>
@@ -945,6 +946,7 @@
                     <button id="edit-btn">Edit</button>
                     <button id="shortcut-btn">Create Shortcut</button>
                     <button id="select-btn">Select</button>
+                    <button id="generate-shortcut-script-btn" style="display: none;">Generate Shortcut Script</button>
                 </div>
             </div>
         </div>
@@ -1078,6 +1080,19 @@
             <button id="reload-selections-script-page-btn" style="display: none;">Reload Page</button>
         </div>
     </div>
+
+        <div id="shortcut-script-modal" class="modal">
+            <div class="modal-content">
+                <span class="close">&times;</span>
+                <h2>Generate Shortcut Script</h2>
+                <p>This PowerShell script will create shortcuts for the selected files.</p>
+                <textarea id="shortcut-batch-script" rows="10" cols="80" readonly></textarea>
+                <button id="copy-shortcut-script-btn">Copy to Clipboard</button>
+                <a id="download-shortcut-script-link" download="create_shortcuts.ps1">
+                    <button>Download .ps1 File</button>
+                </a>
+            </div>
+        </div>
 
     <div id="orphaned-thumbnails-modal" class="modal">
         <div class="modal-content">
@@ -1249,6 +1264,7 @@
         let currentDirHandle;
         var landscapeSelectionMode = ''; // 'landscape' or 'landscape-rotate'
         let preEditModeCanvasMap = new Map();
+        let isShortcutMode = false;
         var landscapeSelections = new Set();
         var landscapeRotateSelections = new Set();
         var deleteSelections = new Set();
@@ -1425,6 +1441,13 @@
             const inEditMode = editModeBtn && editModeBtn.textContent.includes('On');
             const renameBtn = document.getElementById('rename-btn');
             const deleteBtn = document.getElementById('delete-selected-btn');
+            const generateShortcutScriptBtn = document.getElementById('generate-shortcut-script-btn');
+
+            if (isShortcutMode) {
+                generateShortcutScriptBtn.style.display = shortcutSelections.size > 0 ? 'inline-block' : 'none';
+            } else {
+                generateShortcutScriptBtn.style.display = 'none';
+            }
 
             if (inEditMode) {
                 playBtn.disabled = playSelections.size === 0;
@@ -2304,7 +2327,11 @@
                 playlist = Array.from(playSelections).map(videoName => {
                     const videoFile = allVideoFiles.find(f => f.name.startsWith(videoName));
                     if (videoFile) {
-                        return { dataset: { fileName: videoFile.name.replace(/\.[^/.]+$/, ".jpg") } };
+                        // Create a mock wrapper that has the properties loadVideo expects
+                        return {
+                            dataset: { fileName: videoFile.name.replace(/\.[^/.]+$/, ".jpg") },
+                            querySelector: () => null // Prevent error on querySelector call
+                        };
                     }
                     return null;
                 }).filter(Boolean);
@@ -2704,8 +2731,10 @@
             if (hasEditThumbnails) {
                 const editModeOptions = document.getElementById('edit-mode-options');
                 const editModeBtn = document.getElementById('edit-mode-btn');
+                const shortcutModeBtn = document.getElementById('shortcut-mode-btn');
                 const generateBatBtn = document.getElementById('generate-edit-bat-btn');
                 const applySelectionsBtn = document.getElementById('apply-selections-btn');
+                const generateShortcutScriptBtn = document.getElementById('generate-shortcut-script-btn');
 
                 editModeOptions.style.display = 'block';
                 
@@ -2717,9 +2746,34 @@
                 // --- Attach listeners only once ---
                 if (!editModeBtn.dataset.listenerAttached) {
                     editModeBtn.dataset.listenerAttached = 'true';
+                    shortcutModeBtn.dataset.listenerAttached = 'true';
                     generateBatBtn.dataset.listenerAttached = 'true';
+                    generateShortcutScriptBtn.dataset.listenerAttached = 'true';
+
+                    shortcutModeBtn.addEventListener('click', async () => {
+                        isShortcutMode = true;
+                        await renderShortcutMode();
+                    });
+
+                    generateShortcutScriptBtn.addEventListener('click', () => {
+                        generateShortcutScript();
+                        document.getElementById('shortcut-script-modal').style.display = 'block';
+                    });
+
+                    document.getElementById('shortcut-script-modal').querySelector('.close').addEventListener('click', () => {
+                        document.getElementById('shortcut-script-modal').style.display = 'none';
+                    });
+
+                    document.getElementById('copy-shortcut-script-btn').addEventListener('click', () => {
+                        const scriptTextArea = document.getElementById('shortcut-batch-script');
+                        scriptTextArea.select();
+                        navigator.clipboard.writeText(scriptTextArea.value).then(() => {
+                            alert('Script copied to clipboard!');
+                        });
+                    });
 
                     editModeBtn.addEventListener('click', () => {
+                        isShortcutMode = false;
                         const listOption = sizeSelector.querySelector('option[value="list"]');
                         if (editModeBtn.textContent.includes('Off')) {
                             // Before entering edit mode, save the current canvas for each thumbnail
@@ -3157,6 +3211,158 @@
             recentDirs = recentDirs.filter(d => d.name !== dirName);
             await setDb('recentDirectories', recentDirs);
             await loadRecentDirectories();
+        }
+
+        async function renderShortcutMode() {
+            try {
+                const mainDirHandle = await window.showDirectoryPicker();
+                thumbnailContainer.innerHTML = '';
+                document.getElementById('landscape-buttons').style.display = 'flex';
+                allVideoFiles = []; // Clear the global video files list
+
+                let yOffset = 20;
+
+                for await (const entry of mainDirHandle.values()) {
+                    if (entry.kind !== 'directory') continue;
+
+                    const subDirHandle = entry;
+
+                    // Scan for video files in the subdirectory
+                    for await (const videoEntry of subDirHandle.values()) {
+                        if (videoEntry.kind === 'file' && videoEntry.name.match(/\.(mp4|avi|mov|mkv)$/i)) {
+                            allVideoFiles.push(await videoEntry.getFile());
+                        }
+                    }
+
+                    let newestShortcutDate = 0;
+                    let scDirExists = true;
+
+                    try {
+                        const scDirHandle = await subDirHandle.getDirectoryHandle('sc');
+                        for await (const shortcutEntry of scDirHandle.values()) {
+                            if (shortcutEntry.kind === 'file') {
+                                const file = await shortcutEntry.getFile();
+                                if (file.lastModified > newestShortcutDate) {
+                                    newestShortcutDate = file.lastModified;
+                                }
+                            }
+                        }
+                    } catch (e) {
+                        scDirExists = false; // sc folder doesn't exist, so all thumbs are new
+                    }
+
+                    try {
+                        const editThumbsDirHandle = await subDirHandle.getDirectoryHandle('Edit Thumbnails');
+                        const header = document.createElement('h3');
+                        header.textContent = subDirHandle.name;
+                        header.style.position = 'absolute';
+                        header.style.top = `${yOffset}px`;
+                        header.style.left = '20px';
+                        header.style.color = 'black';
+                        thumbnailContainer.appendChild(header);
+                        yOffset += 30;
+
+                        let filesToProcess = [];
+                        for await (const thumbEntry of editThumbsDirHandle.values()) {
+                             if (thumbEntry.kind === 'file' && thumbEntry.name.match(/\.(jpe?g|png|gif|webp)$/i)) {
+                                const file = await thumbEntry.getFile();
+                                if (file.lastModified > newestShortcutDate) {
+                                    filesToProcess.push(file);
+                                }
+                            }
+                        }
+
+                        const groupedFiles = filesToProcess.reduce((acc, file) => {
+                            const videoName = file.name.substring(0, file.name.lastIndexOf('_'));
+                            if (!acc[videoName]) acc[videoName] = [];
+                            acc[videoName].push(file);
+                            return acc;
+                        }, {});
+
+                        const videoNames = Object.keys(groupedFiles).sort();
+
+                        for (const videoName of videoNames) {
+                             const files = groupedFiles[videoName];
+                            files.sort((a, b) => {
+                                const aNum = parseInt(a.name.substring(a.name.lastIndexOf('_') + 1));
+                                const bNum = parseInt(b.name.substring(b.name.lastIndexOf('_') + 1));
+                                return aNum - bNum;
+                            });
+
+                            const rowDiv = document.createElement('div');
+                            rowDiv.classList.add('landscape-row');
+                            rowDiv.dataset.videoName = videoName;
+                            rowDiv.dataset.parentDir = subDirHandle.name; // Store parent dir for script generation
+                            thumbnailContainer.appendChild(rowDiv);
+
+                            rowDiv.addEventListener('click', () => {
+                                if (landscapeSelectionMode !== 'shortcut') {
+                                    alert('Only "Create Shortcut" mode is available.');
+                                    return;
+                                }
+                                if (shortcutSelections.has(videoName)) {
+                                    shortcutSelections.delete(videoName);
+                                    rowDiv.classList.remove('selected-shortcut');
+                                } else {
+                                    shortcutSelections.add(videoName);
+                                    rowDiv.classList.add('selected-shortcut');
+                                }
+                                updatePlayButtonState();
+                            });
+
+                            const imageLoadPromises = files.map(file => {
+                                return new Promise((resolve, reject) => {
+                                    const img = new Image();
+                                    img.onload = () => {
+                                        img.classList.add('thumbnail');
+                                        img.dataset.fileName = file.name;
+                                        img.dataset.originalWidth = img.width;
+                                        img.dataset.originalHeight = img.height;
+                                        rowDiv.appendChild(img);
+                                        resolve(img);
+                                    };
+                                    img.onerror = reject;
+                                    img.src = URL.createObjectURL(file);
+                                });
+                            });
+                            await Promise.all(imageLoadPromises);
+                            yOffset = layoutSingleRow(rowDiv, yOffset);
+                        }
+
+
+                    } catch (e) {
+                        // Edit Thumbnails folder doesn't exist for this subdir, skip.
+                    }
+                }
+                 updateContentSpacer();
+
+            } catch (err) {
+                if (err.name !== 'AbortError') console.error('Failed to open directory for shortcut mode:', err);
+            }
+        }
+
+        function layoutSingleRow(row, yOffset) {
+            const scale = parseFloat(sizeSelector.value);
+            row.style.position = 'absolute';
+            row.style.top = yOffset + 'px';
+            let xOffset = 20;
+            let maxRowHeight = 0;
+            const thumbnails = row.querySelectorAll('.thumbnail');
+
+            thumbnails.forEach(thumb => {
+                const scaledWidth = parseFloat(thumb.dataset.originalWidth) * scale;
+                const scaledHeight = parseFloat(thumb.dataset.originalHeight) * scale;
+                thumb.style.position = 'absolute';
+                thumb.style.width = `${scaledWidth}px`;
+                thumb.style.height = `${scaledHeight}px`;
+                thumb.style.left = `${xOffset}px`;
+                thumb.style.top = '0px';
+                xOffset += scaledWidth + 20;
+                if (scaledHeight > maxRowHeight) maxRowHeight = scaledHeight;
+            });
+            row.style.width = `${xOffset}px`;
+            row.style.height = `${maxRowHeight}px`;
+            return yOffset + maxRowHeight + 20;
         }
 
         async function renderEditMode() {
@@ -3655,6 +3861,64 @@
             document.getElementById('final-landscape-batch-script').value = script;
             const blob = new Blob([script], { type: 'text/plain;charset=utf-8' });
             document.getElementById('download-final-landscape-script-link').href = URL.createObjectURL(blob);
+        }
+
+        function generateShortcutScript() {
+            const finalScriptLines = [
+                '# PowerShell Script to create shortcuts',
+                '$wshell = New-Object -ComObject WScript.Shell'
+            ];
+
+            const selectedRows = document.querySelectorAll('.landscape-row.selected-shortcut');
+            const selectionsByDir = new Map();
+
+            // 1. Group selections by parent directory
+            selectedRows.forEach(row => {
+                const videoName = row.dataset.videoName;
+                const parentDir = row.dataset.parentDir;
+
+                if (!selectionsByDir.has(parentDir)) {
+                    selectionsByDir.set(parentDir, []);
+                }
+                selectionsByDir.get(parentDir).push(videoName);
+            });
+
+            // 2. Generate script lines for each directory
+            selectionsByDir.forEach((videoNames, parentDir) => {
+                finalScriptLines.push(''); // Add a blank line for readability
+                finalScriptLines.push(`# --- Processing directory: ${parentDir} ---`);
+
+                // Sanitize dir name to create a unique and valid variable name
+                const safeVarName = parentDir.replace(/[^a-zA-Z0-9_]/g, '');
+                const targetDirVar = `$targetDir_${safeVarName}`;
+
+                finalScriptLines.push(`${targetDirVar} = Join-Path -Path $PSScriptRoot -ChildPath '${parentDir}'`);
+                finalScriptLines.push(`if (-not (Test-Path -LiteralPath (Join-Path -Path ${targetDirVar} -ChildPath 'sc'))) { New-Item -ItemType Directory -Path (Join-Path -Path ${targetDirVar} -ChildPath 'sc') }`);
+
+                videoNames.forEach(videoName => {
+                    const videoFile = allVideoFiles.find(f => f.name.startsWith(videoName));
+                    if (videoFile) {
+                        const fullVideoName = videoFile.name;
+                        const targetPath = `Join-Path -Path ${targetDirVar} -ChildPath '${fullVideoName}'`;
+                        const shortcutPath = `Join-Path -Path ${targetDirVar} -ChildPath "sc\\${fullVideoName}.lnk"`;
+
+                        finalScriptLines.push(
+                            `$shortcut = $wshell.CreateShortcut(${shortcutPath})`,
+                            `$shortcut.TargetPath = ${targetPath}`,
+                            `$shortcut.Save()`
+                        );
+                    }
+                });
+            });
+
+            finalScriptLines.push('');
+            finalScriptLines.push('Write-Host "Shortcut creation complete."');
+            finalScriptLines.push('Read-Host -Prompt "Press Enter to exit"');
+
+            const script = finalScriptLines.join('\r\n');
+            document.getElementById('shortcut-batch-script').value = script;
+            const blob = new Blob([script], { type: 'text/plain;charset=utf-8' });
+            document.getElementById('download-shortcut-script-link').href = URL.createObjectURL(blob);
         }
 
         document.getElementById('final-landscape-script-modal').querySelector('.close').addEventListener('click', () => {
