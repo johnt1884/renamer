@@ -2677,15 +2677,6 @@
 
             const projectData = loadProjectData(directoryName);
 
-            const shortcutModeBtn = document.getElementById('shortcut-mode-btn');
-            if (!shortcutModeBtn.dataset.listenerAttached) {
-                shortcutModeBtn.dataset.listenerAttached = 'true';
-                shortcutModeBtn.addEventListener('click', async () => {
-                    isShortcutMode = true;
-                    await renderShortcutMode();
-                });
-            }
-
             projectUsernameInput.value = projectData.projectUsername;
             document.getElementById('num-elements-input').value = projectData.numElements;
             document.getElementById('font-size-slider').value = projectData.fontSize;
@@ -2742,7 +2733,6 @@
                 const editModeBtn = document.getElementById('edit-mode-btn');
                 const generateBatBtn = document.getElementById('generate-edit-bat-btn');
                 const applySelectionsBtn = document.getElementById('apply-selections-btn');
-                const generateShortcutScriptBtn = document.getElementById('generate-shortcut-script-btn');
 
                 editModeOptions.style.display = 'block';
                 
@@ -2755,27 +2745,8 @@
                 if (!editModeBtn.dataset.listenerAttached) {
                     editModeBtn.dataset.listenerAttached = 'true';
                     generateBatBtn.dataset.listenerAttached = 'true';
-                    generateShortcutScriptBtn.dataset.listenerAttached = 'true';
-
-                    generateShortcutScriptBtn.addEventListener('click', () => {
-                        generateShortcutScript();
-                        document.getElementById('shortcut-script-modal').style.display = 'block';
-                    });
-
-                    document.getElementById('shortcut-script-modal').querySelector('.close').addEventListener('click', () => {
-                        document.getElementById('shortcut-script-modal').style.display = 'none';
-                    });
-
-                    document.getElementById('copy-shortcut-script-btn').addEventListener('click', () => {
-                        const scriptTextArea = document.getElementById('shortcut-batch-script');
-                        scriptTextArea.select();
-                        navigator.clipboard.writeText(scriptTextArea.value).then(() => {
-                            alert('Script copied to clipboard!');
-                        });
-                    });
 
                     editModeBtn.addEventListener('click', () => {
-                        isShortcutMode = false;
                         const listOption = sizeSelector.querySelector('option[value="list"]');
                         if (editModeBtn.textContent.includes('Off')) {
                             // Before entering edit mode, save the current canvas for each thumbnail
@@ -3213,155 +3184,6 @@
             recentDirs = recentDirs.filter(d => d.name !== dirName);
             await setDb('recentDirectories', recentDirs);
             await loadRecentDirectories();
-        }
-
-        async function renderShortcutMode() {
-            try {
-                const mainDirHandle = await window.showDirectoryPicker();
-                thumbnailContainer.innerHTML = '';
-                document.getElementById('landscape-buttons').style.display = 'flex';
-                allVideoFiles = []; // Clear the global video files list
-
-                let yOffset = 20;
-
-                for await (const entry of mainDirHandle.values()) {
-                    if (entry.kind !== 'directory') continue;
-
-                    const subDirHandle = entry;
-
-                    // Scan for video files in the subdirectory
-                    for await (const videoEntry of subDirHandle.values()) {
-                        if (videoEntry.kind === 'file' && videoEntry.name.match(/\.(mp4|avi|mov|mkv)$/i)) {
-                            allVideoFiles.push(await videoEntry.getFile());
-                        }
-                    }
-
-                    const existingShortcutBaseNames = new Set();
-                    try {
-                        const scDirHandle = await subDirHandle.getDirectoryHandle('sc');
-                        for await (const shortcutEntry of scDirHandle.values()) {
-                            if (shortcutEntry.kind === 'file' && shortcutEntry.name.endsWith('.lnk')) {
-                                const videoFullName = shortcutEntry.name.slice(0, -4);
-                                const videoBaseName = videoFullName.substring(0, videoFullName.lastIndexOf('.'));
-                                existingShortcutBaseNames.add(videoBaseName);
-                            }
-                        }
-                    } catch (e) {
-                        // sc folder doesn't exist, which is fine. The set will be empty.
-                    }
-
-                    try {
-                        const editThumbsDirHandle = await subDirHandle.getDirectoryHandle('Edit Thumbnails');
-                        const header = document.createElement('h3');
-                        header.textContent = subDirHandle.name;
-                        header.style.position = 'absolute';
-                        header.style.top = `${yOffset}px`;
-                        header.style.left = '20px';
-                        header.style.color = 'black';
-                        thumbnailContainer.appendChild(header);
-                        yOffset += 30;
-
-                        const filesToProcess = [];
-                        for await (const thumbEntry of editThumbsDirHandle.values()) {
-                             if (thumbEntry.kind === 'file' && thumbEntry.name.match(/\.(jpe?g|png|gif|webp)$/i)) {
-                                const videoBaseName = thumbEntry.name.substring(0, thumbEntry.name.lastIndexOf('_'));
-                                if (!existingShortcutBaseNames.has(videoBaseName)) {
-                                    filesToProcess.push(await thumbEntry.getFile());
-                                }
-                            }
-                        }
-
-                        const groupedFiles = filesToProcess.reduce((acc, file) => {
-                            const videoName = file.name.substring(0, file.name.lastIndexOf('_'));
-                            if (!acc[videoName]) acc[videoName] = [];
-                            acc[videoName].push(file);
-                            return acc;
-                        }, {});
-
-                        const videoNames = Object.keys(groupedFiles).sort();
-
-                        for (const videoName of videoNames) {
-                             const files = groupedFiles[videoName];
-                            files.sort((a, b) => {
-                                const aNum = parseInt(a.name.substring(a.name.lastIndexOf('_') + 1));
-                                const bNum = parseInt(b.name.substring(b.name.lastIndexOf('_') + 1));
-                                return aNum - bNum;
-                            });
-
-                            const rowDiv = document.createElement('div');
-                            rowDiv.classList.add('landscape-row');
-                            rowDiv.dataset.videoName = videoName;
-                            rowDiv.dataset.parentDir = subDirHandle.name; // Store parent dir for script generation
-                            thumbnailContainer.appendChild(rowDiv);
-
-                            rowDiv.addEventListener('click', () => {
-                                if (landscapeSelectionMode !== 'shortcut') {
-                                    alert('Only "Create Shortcut" mode is available.');
-                                    return;
-                                }
-                                if (shortcutSelections.has(videoName)) {
-                                    shortcutSelections.delete(videoName);
-                                    rowDiv.classList.remove('selected-shortcut');
-                                } else {
-                                    shortcutSelections.add(videoName);
-                                    rowDiv.classList.add('selected-shortcut');
-                                }
-                                updatePlayButtonState();
-                            });
-
-                            const imageLoadPromises = files.map(file => {
-                                return new Promise((resolve, reject) => {
-                                    const img = new Image();
-                                    img.onload = () => {
-                                        img.classList.add('thumbnail');
-                                        img.dataset.fileName = file.name;
-                                        img.dataset.originalWidth = img.width;
-                                        img.dataset.originalHeight = img.height;
-                                        rowDiv.appendChild(img);
-                                        resolve(img);
-                                    };
-                                    img.onerror = reject;
-                                    img.src = URL.createObjectURL(file);
-                                });
-                            });
-                            await Promise.all(imageLoadPromises);
-                            yOffset = layoutSingleRow(rowDiv, yOffset);
-                        }
-
-
-                    } catch (e) {
-                        // Edit Thumbnails folder doesn't exist for this subdir, skip.
-                    }
-                }
-                 updateContentSpacer();
-
-            } catch (err) {
-                if (err.name !== 'AbortError') console.error('Failed to open directory for shortcut mode:', err);
-            }
-        }
-
-        function layoutSingleRow(row, yOffset) {
-            const scale = parseFloat(sizeSelector.value);
-            row.style.position = 'absolute';
-            row.style.top = yOffset + 'px';
-            let xOffset = 20;
-            let maxRowHeight = 0;
-            const thumbnails = row.querySelectorAll('.thumbnail');
-
-            thumbnails.forEach(thumb => {
-                const scaledWidth = parseFloat(thumb.dataset.originalWidth) * scale;
-                const scaledHeight = parseFloat(thumb.dataset.originalHeight) * scale;
-                thumb.style.position = 'absolute';
-                thumb.style.width = `${scaledWidth}px`;
-                thumb.style.height = `${scaledHeight}px`;
-                thumb.style.left = `${xOffset}px`;
-                thumb.style.top = '0px';
-                xOffset += scaledWidth + 20;
-                if (scaledHeight > maxRowHeight) maxRowHeight = scaledHeight;
-            });
-            row.style.width = `${xOffset}px`;
-            row.style.height = `${maxRowHeight}px`;
-            return yOffset + maxRowHeight + 20;
         }
 
         async function renderEditMode() {
@@ -3862,64 +3684,6 @@
             document.getElementById('download-final-landscape-script-link').href = URL.createObjectURL(blob);
         }
 
-        function generateShortcutScript() {
-            const finalScriptLines = [
-                '# PowerShell Script to create shortcuts',
-                '$wshell = New-Object -ComObject WScript.Shell'
-            ];
-
-            const selectedRows = document.querySelectorAll('.landscape-row.selected-shortcut');
-            const selectionsByDir = new Map();
-
-            // 1. Group selections by parent directory
-            selectedRows.forEach(row => {
-                const videoName = row.dataset.videoName;
-                const parentDir = row.dataset.parentDir;
-
-                if (!selectionsByDir.has(parentDir)) {
-                    selectionsByDir.set(parentDir, []);
-                }
-                selectionsByDir.get(parentDir).push(videoName);
-            });
-
-            // 2. Generate script lines for each directory
-            selectionsByDir.forEach((videoNames, parentDir) => {
-                finalScriptLines.push(''); // Add a blank line for readability
-                finalScriptLines.push(`# --- Processing directory: ${parentDir} ---`);
-
-                // Sanitize dir name to create a unique and valid variable name
-                const safeVarName = parentDir.replace(/[^a-zA-Z0-9_]/g, '');
-                const targetDirVar = `$targetDir_${safeVarName}`;
-
-                finalScriptLines.push(`${targetDirVar} = Join-Path -Path $PSScriptRoot -ChildPath '${parentDir}'`);
-                finalScriptLines.push(`if (-not (Test-Path -LiteralPath (Join-Path -Path ${targetDirVar} -ChildPath 'sc'))) { New-Item -ItemType Directory -Path (Join-Path -Path ${targetDirVar} -ChildPath 'sc') }`);
-
-                videoNames.forEach(videoName => {
-                    const videoFile = allVideoFiles.find(f => f.name.startsWith(videoName));
-                    if (videoFile) {
-                        const fullVideoName = videoFile.name;
-                        const targetPath = `Join-Path -Path ${targetDirVar} -ChildPath '${fullVideoName}'`;
-                        const shortcutPath = `Join-Path -Path ${targetDirVar} -ChildPath "sc\\${fullVideoName}.lnk"`;
-
-                        finalScriptLines.push(
-                            `$shortcut = $wshell.CreateShortcut(${shortcutPath})`,
-                            `$shortcut.TargetPath = ${targetPath}`,
-                            `$shortcut.Save()`
-                        );
-                    }
-                });
-            });
-
-            finalScriptLines.push('');
-            finalScriptLines.push('Write-Host "Shortcut creation complete."');
-            finalScriptLines.push('Read-Host -Prompt "Press Enter to exit"');
-
-            const script = finalScriptLines.join('\r\n');
-            document.getElementById('shortcut-batch-script').value = script;
-            const blob = new Blob([script], { type: 'text/plain;charset=utf-8' });
-            document.getElementById('download-shortcut-script-link').href = URL.createObjectURL(blob);
-        }
-
         document.getElementById('final-landscape-script-modal').querySelector('.close').addEventListener('click', () => {
             document.getElementById('final-landscape-script-modal').style.display = 'none';
         });
@@ -3986,6 +3750,86 @@
         document.getElementById('reload-selections-script-page-btn').addEventListener('click', () => {
             location.reload();
         });
+
+        document.getElementById('shortcut-mode-btn').addEventListener('click', async () => {
+            isShortcutMode = true;
+            await renderShortcutMode();
+        });
+
+        document.getElementById('generate-shortcut-script-btn').addEventListener('click', () => {
+            generateShortcutScript();
+            document.getElementById('shortcut-script-modal').style.display = 'block';
+        });
+
+        document.getElementById('shortcut-script-modal').querySelector('.close').addEventListener('click', () => {
+            document.getElementById('shortcut-script-modal').style.display = 'none';
+        });
+
+        document.getElementById('copy-shortcut-script-btn').addEventListener('click', () => {
+            const scriptTextArea = document.getElementById('shortcut-batch-script');
+            scriptTextArea.select();
+            navigator.clipboard.writeText(scriptTextArea.value).then(() => {
+                alert('Script copied to clipboard!');
+            });
+        });
+
+        function generateShortcutScript() {
+            const finalScriptLines = [
+                '# PowerShell Script to create shortcuts',
+                '$wshell = New-Object -ComObject WScript.Shell'
+            ];
+
+            const selectedRows = document.querySelectorAll('.landscape-row.selected-shortcut');
+            const selectionsByDir = new Map();
+
+            // 1. Group selections by parent directory
+            selectedRows.forEach(row => {
+                const videoName = row.dataset.videoName;
+                const parentDir = row.dataset.parentDir;
+
+                if (!selectionsByDir.has(parentDir)) {
+                    selectionsByDir.set(parentDir, []);
+                }
+                selectionsByDir.get(parentDir).push(videoName);
+            });
+
+            // 2. Generate script lines for each directory
+            selectionsByDir.forEach((videoNames, parentDir) => {
+                finalScriptLines.push(''); // Add a blank line for readability
+                finalScriptLines.push(`# --- Processing directory: ${parentDir} ---`);
+
+                // Sanitize dir name to create a unique and valid variable name
+                const safeVarName = parentDir.replace(/[^a-zA-Z0-9_]/g, '');
+                const targetDirVar = `$targetDir_${safeVarName}`;
+
+                finalScriptLines.push(`${targetDirVar} = Join-Path -Path $PSScriptRoot -ChildPath '${parentDir}'`);
+                finalScriptLines.push(`if (-not (Test-Path -LiteralPath (Join-Path -Path ${targetDirVar} -ChildPath 'sc'))) { New-Item -ItemType Directory -Path (Join-Path -Path ${targetDirVar} -ChildPath 'sc') }`);
+
+                videoNames.forEach(videoName => {
+                    const videoFile = allVideoFiles.find(f => f.name.startsWith(videoName) && f.customPath === parentDir);
+                    if (videoFile) {
+                        const fullVideoName = videoFile.name;
+                        const targetPath = `Join-Path -Path ${targetDirVar} -ChildPath '${fullVideoName}'`;
+                        const shortcutPath = `Join-Path -Path ${targetDirVar} -ChildPath "sc\\${fullVideoName}.lnk"`;
+
+                        finalScriptLines.push(
+                            `$shortcut = $wshell.CreateShortcut(${shortcutPath})`,
+                            `$shortcut.TargetPath = ${targetPath}`,
+                            `$shortcut.Save()`
+                        );
+                    }
+                });
+            });
+
+            finalScriptLines.push('');
+            finalScriptLines.push('Write-Host "Shortcut creation complete."');
+            finalScriptLines.push('Read-Host -Prompt "Press Enter to exit"');
+
+            const script = finalScriptLines.join('\r\n');
+            document.getElementById('shortcut-batch-script').value = script;
+            const blob = new Blob([script], { type: 'text/plain;charset=utf-8' });
+            document.getElementById('download-shortcut-script-link').href = URL.createObjectURL(blob);
+        }
 
         function generateSelectionsTxtScript() {
             const script = [
@@ -6121,6 +5965,150 @@ do {
             }
         });
 
+    async function renderShortcutMode() {
+    try {
+        const dirHandle = await window.showDirectoryPicker();
+        thumbnailContainer.innerHTML = ''; // Clear existing content
+        document.getElementById('landscape-buttons').style.display = 'flex';
+        isShortcutMode = true;
+        updatePlayButtonState();
+
+        allVideoFiles = []; // Reset and populate for this mode
+        const addedVideoFiles = new Set();
+
+        let allSubDirs = [];
+        for await (const entry of dirHandle.values()) {
+            if (entry.kind === 'directory') {
+                allSubDirs.push(entry);
+            }
+        }
+
+        let allFilesToDisplay = [];
+
+        for (const subDir of allSubDirs) {
+            let latestShortcutTime = 0;
+            let scDirExists = true;
+            try {
+                const scDirHandle = await subDir.getDirectoryHandle('sc');
+                for await (const shortcut of scDirHandle.values()) {
+                    if (shortcut.kind === 'file') {
+                        const file = await shortcut.getFile();
+                        if (file.lastModified > latestShortcutTime) {
+                            latestShortcutTime = file.lastModified;
+                        }
+                    }
+                }
+            } catch (e) {
+                scDirExists = false; // 'sc' folder doesn't exist
+            }
+
+            try {
+                const editThumbsHandle = await subDir.getDirectoryHandle('Edit Thumbnails');
+                const videoFiles = new Map();
+                 for await (const entry of subDir.values()) {
+                    if (entry.kind === 'file' && entry.name.match(/\.(mp4|avi|mov|mkv)$/i)) {
+                         const file = await entry.getFile();
+                         const baseName = file.name.substring(0, file.name.lastIndexOf('.'));
+                         videoFiles.set(baseName, file);
+                    }
+                }
+
+
+                for await (const thumb of editThumbsHandle.values()) {
+                    if (thumb.kind === 'file') {
+                        const thumbFile = await thumb.getFile();
+                        const videoBaseName = thumbFile.name.substring(0, thumbFile.name.lastIndexOf('_'));
+                        const videoFile = videoFiles.get(videoBaseName);
+
+                        if (videoFile && (videoFile.lastModified > latestShortcutTime || !scDirExists)) {
+                            if (!addedVideoFiles.has(videoFile.name)) {
+                                videoFile.customPath = subDir.name;
+                                allVideoFiles.push(videoFile);
+                                addedVideoFiles.add(videoFile.name);
+                            }
+                             allFilesToDisplay.push({
+                                file: thumbFile,
+                                videoName: videoBaseName,
+                                parentDir: subDir.name
+                            });
+                        }
+                    }
+                }
+            } catch (e) {
+                // 'Edit Thumbnails' folder might not exist, skip this subDir
+            }
+        }
+
+        const groupedFiles = allFilesToDisplay.reduce((acc, item) => {
+            const key = `${item.parentDir}/${item.videoName}`;
+            if (!acc[key]) {
+                acc[key] = { files: [], parentDir: item.parentDir, videoName: item.videoName };
+            }
+            acc[key].files.push(item.file);
+            return acc;
+        }, {});
+
+        for (const key in groupedFiles) {
+            const group = groupedFiles[key];
+             await layoutSingleRow(group.videoName, group.files, group.parentDir);
+        }
+
+        layoutLandscapeThumbnails();
+
+
+    } catch (err) {
+        if (err.name !== 'AbortError') {
+            console.error('Error in shortcut mode:', err);
+        }
+    }
+}
+async function layoutSingleRow(videoName, files, parentDir) {
+    const rowDiv = document.createElement('div');
+    rowDiv.classList.add('landscape-row');
+    rowDiv.dataset.videoName = videoName;
+    rowDiv.dataset.parentDir = parentDir; // Store parent directory
+    thumbnailContainer.appendChild(rowDiv);
+
+    const h4 = document.createElement('h4');
+    h4.textContent = `${parentDir} - ${videoName}`;
+    h4.style.position = 'absolute';
+    h4.style.top = '-20px';
+    h4.style.left = '0';
+    h4.style.color = 'black';
+    rowDiv.appendChild(h4);
+
+    rowDiv.addEventListener('click', () => {
+        // Only allow shortcut selection in this mode
+        landscapeSelectionMode = 'shortcut';
+
+        if (shortcutSelections.has(videoName)) {
+            shortcutSelections.delete(videoName);
+        } else {
+            shortcutSelections.add(videoName);
+        }
+
+        rowDiv.classList.toggle('selected-shortcut', shortcutSelections.has(videoName));
+        updatePlayButtonState();
+    });
+
+    const imageLoadPromises = files.map(file => {
+        return new Promise((resolve, reject) => {
+            const img = new Image();
+            img.onload = () => {
+                img.classList.add('thumbnail');
+                img.dataset.fileName = file.name;
+                img.dataset.originalWidth = img.width;
+                img.dataset.originalHeight = img.height;
+                rowDiv.appendChild(img);
+                resolve(img);
+            };
+            img.onerror = reject;
+            img.src = URL.createObjectURL(file);
+        });
+    });
+
+    await Promise.all(imageLoadPromises);
+}
     </script>
 </body>
 </html>
