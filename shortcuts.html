@@ -383,20 +383,20 @@
 
                 let mostRecentShortcutTime = 0;
                 try {
-                    const scDirHandle = await project.handle.getDirectoryHandle('sc');
-                    for await (const entry of scDirHandle.values()) {
-                        if (entry.kind === 'file' && entry.name.endsWith('.lnk')) {
-                            const file = await entry.getFile();
-                            if (file.lastModified > mostRecentShortcutTime) {
-                                mostRecentShortcutTime = file.lastModified;
-                            }
-                        }
+                    const scDateHandle = await project.handle.getFileHandle('scdate.txt');
+                    const file = await scDateHandle.getFile();
+                    const text = await file.text();
+                    const date = new Date(text.trim());
+                    if (!isNaN(date)) {
+                        mostRecentShortcutTime = date.getTime();
                     }
-                } catch(e) { /* no sc folder */ }
+                } catch(e) {
+                    // scdate.txt doesn't exist or is invalid, default to 0 to show all thumbs
+                }
 
                 headerDateInfo.textContent = mostRecentShortcutTime > 0
                     ? `Last Shortcut: ${new Date(mostRecentShortcutTime).toLocaleString()}`
-                    : 'No shortcuts found';
+                    : 'No scdate.txt found';
 
                 const projectVideoFiles = [];
                 for await (const entry of project.handle.values()) {
@@ -536,7 +536,6 @@
                 if(currentDirHandle) {
                     renderShortcutMode(e.target.value);
                 }
-                e.target.value = '';
             });
         };
 
