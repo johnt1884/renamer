@@ -152,6 +152,28 @@
             margin-bottom: 10px;
             border-bottom: 1px solid #ccc;
             padding-bottom: 5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .date-info {
+            display: none;
+            font-size: 0.8em;
+            font-weight: normal;
+            color: #555;
+        }
+        .main-container.show-dates .date-info {
+            display: inline;
+        }
+        .checkbox-container {
+            display: flex;
+            align-items: center;
+            margin-left: 15px;
+            color: white;
+            font-size: 14px;
+        }
+        .checkbox-container input {
+            margin-right: 5px;
         }
     </style>
 </head>
@@ -178,6 +200,10 @@
                     <option value="date-new">Date (Newest)</option>
                     <option value="date-old">Date (Oldest)</option>
                 </select>
+                <div class="checkbox-container">
+                    <input type="checkbox" id="show-dates-checkbox">
+                    <label for="show-dates-checkbox">Show Dates</label>
+                </div>
             </div>
             <div id="content-area" style="display: flex; flex-grow: 1; overflow: hidden;">
                 <div id="thumbnail-container">
@@ -218,6 +244,12 @@
         let allVideoFiles = [];
         let shortcutSelections = new Set();
         let currentDirHandle;
+        const mainContainer = document.querySelector('.main-container');
+        const showDatesCheckbox = document.getElementById('show-dates-checkbox');
+
+        showDatesCheckbox.addEventListener('change', () => {
+            mainContainer.classList.toggle('show-dates', showDatesCheckbox.checked);
+        });
 
         function updateContentSpacer() {
             const elements = document.querySelectorAll('.landscape-row, .project-header, hr');
@@ -304,6 +336,7 @@
         async function renderShortcutMode(sortBy = 'name-asc') {
             thumbnailContainer.innerHTML = '';
             shortcutSelections.clear();
+            allVideoFiles = [];
 
             const projectFolders = [];
 
@@ -337,7 +370,15 @@
             for (const project of projectFolders) {
                 const header = document.createElement('h2');
                 header.className = 'project-header';
-                header.textContent = project.name;
+
+                const headerText = document.createElement('span');
+                headerText.textContent = project.name;
+                header.appendChild(headerText);
+
+                const headerDateInfo = document.createElement('span');
+                headerDateInfo.className = 'date-info';
+                header.appendChild(headerDateInfo);
+
                 thumbnailContainer.appendChild(header);
 
                 let mostRecentShortcutTime = 0;
@@ -353,23 +394,25 @@
                     }
                 } catch(e) { /* no sc folder */ }
 
-                allVideoFiles = []; // Clear for each project
+                headerDateInfo.textContent = mostRecentShortcutTime > 0
+                    ? `Last Shortcut: ${new Date(mostRecentShortcutTime).toLocaleString()}`
+                    : 'No shortcuts found';
+
+                const projectVideoFiles = [];
                 for await (const entry of project.handle.values()) {
                     if (entry.kind === 'file' && entry.name.match(/\.(mp4|avi|mov|mkv)$/i)) {
-                        allVideoFiles.push(await entry.getFile());
+                        projectVideoFiles.push(await entry.getFile());
                     }
                 }
-
-                const newVideoFiles = allVideoFiles.filter(videoFile => videoFile.lastModified > mostRecentShortcutTime);
-                const newVideoFileNames = new Set(newVideoFiles.map(videoFile => videoFile.name.substring(0, videoFile.name.lastIndexOf('.'))));
+                allVideoFiles.push(...projectVideoFiles);
 
                 const editDirHandle = await project.handle.getDirectoryHandle('Edit Thumbnails');
                 const landscapeFiles = [];
                  for await (const entry of editDirHandle.values()) {
                     if (entry.kind === 'file' && entry.name.match(/\.(jpe?g|png|gif|webp)$/i)) {
-                        const videoName = entry.name.substring(0, entry.name.lastIndexOf('_'));
-                        if (newVideoFileNames.has(videoName)) {
-                            landscapeFiles.push(await entry.getFile());
+                        const file = await entry.getFile();
+                        if (file.lastModified > mostRecentShortcutTime) {
+                            landscapeFiles.push(file);
                         }
                     }
                 }
@@ -407,6 +450,15 @@
                     rowDiv.className = 'landscape-row';
                     rowDiv.dataset.videoName = videoName;
                     rowDiv.dataset.projectPath = project.path;
+
+                    const videoFile = videoFileMap.get(videoName);
+                    if (videoFile) {
+                        const dateInfo = document.createElement('span');
+                        dateInfo.className = 'date-info';
+                        dateInfo.textContent = `Created: ${new Date(videoFile.lastModified).toLocaleString()}`;
+                        rowDiv.appendChild(dateInfo);
+                    }
+
                     thumbnailContainer.appendChild(rowDiv);
 
                     rowDiv.addEventListener('click', () => {

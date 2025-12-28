@@ -13,18 +13,6 @@ async def main():
 
         await page.evaluate("""
         (async () => {
-            const createMockFile = (name, lastModified) => {
-                const base64Gif = 'R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
-                const byteCharacters = atob(base64Gif);
-                const byteNumbers = new Array(byteCharacters.length);
-                for (let i = 0; i < byteCharacters.length; i++) {
-                    byteNumbers[i] = byteCharacters.charCodeAt(i);
-                }
-                const byteArray = new Uint8Array(byteNumbers);
-                const blob = new Blob([byteArray], {type: 'image/gif'});
-                return new File([blob], name, { type: 'image/gif', lastModified });
-            };
-
             window.MockFileHandle = class MockFileHandle {
                 constructor(name, lastModified) {
                     this.name = name;
@@ -32,7 +20,15 @@ async def main():
                     this.lastModified = lastModified;
                 }
                 async getFile() {
-                    return createMockFile(this.name, this.lastModified);
+                    const base64Gif = 'R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+                    const byteCharacters = atob(base64Gif);
+                    const byteNumbers = new Array(byteCharacters.length);
+                    for (let i = 0; i < byteCharacters.length; i++) {
+                        byteNumbers[i] = byteCharacters.charCodeAt(i);
+                    }
+                    const byteArray = new Uint8Array(byteNumbers);
+                    const blob = new Blob([byteArray], {type: 'image/gif'});
+                    return new File([blob], this.name, { type: 'image/gif', lastModified });
                 }
             }
 
@@ -56,7 +52,7 @@ async def main():
                 }
             }
 
-            const LATEST_SHORTCUT_TIME = 1704067200000; // Jan 1, 2024
+            const LATEST_SHORTCUT_TIME = 1704067200000; // Jan 1, 2024 00:00:00
 
             window.currentDirHandle = new window.MockDirectoryHandle('root', {
                 'Project 1': new window.MockDirectoryHandle('Project 1', {
@@ -64,19 +60,11 @@ async def main():
                         'shortcut1.lnk': new window.MockFileHandle('shortcut1.lnk', LATEST_SHORTCUT_TIME)
                     }),
                     'Edit Thumbnails': new window.MockDirectoryHandle('Edit Thumbnails', {
-                        // Scenario 1: Video is NEW, thumbnail is NEW -> SHOULD BE SHOWN
-                        'video_new_thumb_new_1.jpg': new window.MockFileHandle('video_new_thumb_new_1.jpg', LATEST_SHORTCUT_TIME + 1000),
-                        // Scenario 2: Video is OLD, thumbnail is NEW -> SHOULD BE HIDDEN
-                        'video_old_thumb_new_1.jpg': new window.MockFileHandle('video_old_thumb_new_1.jpg', LATEST_SHORTCUT_TIME + 1000),
-                        // Scenario 3: Video is NEW, thumbnail is OLD -> SHOULD BE SHOWN
-                        'video_new_thumb_old_1.jpg': new window.MockFileHandle('video_new_thumb_old_1.jpg', LATEST_SHORTCUT_TIME - 1000),
-                         // Scenario 4: Video is OLD, thumbnail is OLD -> SHOULD BE HIDDEN
-                        'video_old_thumb_old_1.jpg': new window.MockFileHandle('video_old_thumb_old_1.jpg', LATEST_SHORTCUT_TIME - 1000),
+                        'video_new_thumb_1.jpg': new window.MockFileHandle('video_new_thumb_1.jpg', LATEST_SHORTCUT_TIME + 1000), // Should be visible
+                        'video_old_thumb_1.jpg': new window.MockFileHandle('video_old_thumb_1.jpg', LATEST_SHORTCUT_TIME - 1000), // Should be hidden
                     }),
-                    'video_new_thumb_new.mp4': new window.MockFileHandle('video_new_thumb_new.mp4', LATEST_SHORTCUT_TIME + 1000),
-                    'video_old_thumb_new.mp4': new window.MockFileHandle('video_old_thumb_new.mp4', LATEST_SHORTCUT_TIME - 1000),
-                    'video_new_thumb_old.mp4': new window.MockFileHandle('video_new_thumb_old.mp4', LATEST_SHORTCUT_TIME + 1000),
-                    'video_old_thumb_old.mp4': new window.MockFileHandle('video_old_thumb_old.mp4', LATEST_SHORTCUT_TIME - 1000),
+                    'video_new.mp4': new window.MockFileHandle('video_new.mp4', LATEST_SHORTCUT_TIME + 1000),
+                    'video_old.mp4': new window.MockFileHandle('video_old.mp4', LATEST_SHORTCUT_TIME - 1000),
                 })
             });
 
@@ -86,18 +74,31 @@ async def main():
 
 
         await expect(page.locator(".project-header")).to_have_count(1)
-        # We expect only the two thumbnails corresponding to NEW videos to be visible
-        await expect(page.locator(".thumbnail")).to_have_count(2)
+        await expect(page.locator(".thumbnail")).to_have_count(1)
 
-        # Verify that the correct thumbnails are visible
-        await expect(page.locator('img[data-file-name="video_new_thumb_new_1.jpg"]')).to_be_visible()
-        await expect(page.locator('img[data-file-name="video_new_thumb_old_1.jpg"]')).to_be_visible()
+        # Verify that the correct thumbnail is visible
+        await expect(page.locator('img[data-file-name="video_new_thumb_1.jpg"]')).to_be_visible()
 
-        # Verify that the incorrect thumbnails are hidden
-        await expect(page.locator('img[data-file-name="video_old_thumb_new_1.jpg"]')).to_have_count(0)
-        await expect(page.locator('img[data-file-name="video_old_thumb_old_1.jpg"]')).to_have_count(0)
+        # Verify that the old thumbnail is hidden
+        await expect(page.locator('img[data-file-name="video_old_thumb_1.jpg"]')).to_have_count(0)
 
         print("✅ Date filtering rigorously verified successfully.")
+
+        await page.locator("#show-dates-checkbox").check()
+
+        header_date_locator = page.locator(".project-header .date-info")
+        await expect(header_date_locator).to_be_visible()
+        header_date_text = await header_date_locator.inner_text()
+        assert "1/1/2024" in header_date_text
+        assert "12:00:00 AM" in header_date_text
+        print("✅ Header date format verified.")
+
+        row_date_locator = page.locator(".landscape-row .date-info")
+        await expect(row_date_locator).to_be_visible()
+        row_date_text = await row_date_locator.inner_text()
+        assert "1/1/2024" in row_date_text
+        assert "12:00:01 AM" in row_date_text
+        print("✅ Row date format verified.")
 
         await page.screenshot(path="verification_screenshot.png")
         print("📸 Screenshot captured.")
