@@ -353,20 +353,24 @@
                     }
                 } catch(e) { /* no sc folder */ }
 
-                const editDirHandle = await project.handle.getDirectoryHandle('Edit Thumbnails');
-                const landscapeFiles = [];
-                for await (const entry of editDirHandle.values()) {
-                    if (entry.kind === 'file' && entry.name.match(/\.(jpe?g|png|gif|webp)$/i)) {
-                        const file = await entry.getFile();
-                        if (file.lastModified > mostRecentShortcutTime) {
-                            landscapeFiles.push(file);
-                        }
-                    }
-                }
                 allVideoFiles = []; // Clear for each project
                 for await (const entry of project.handle.values()) {
                     if (entry.kind === 'file' && entry.name.match(/\.(mp4|avi|mov|mkv)$/i)) {
                         allVideoFiles.push(await entry.getFile());
+                    }
+                }
+
+                const newVideoFiles = allVideoFiles.filter(videoFile => videoFile.lastModified > mostRecentShortcutTime);
+                const newVideoFileNames = new Set(newVideoFiles.map(videoFile => videoFile.name.substring(0, videoFile.name.lastIndexOf('.'))));
+
+                const editDirHandle = await project.handle.getDirectoryHandle('Edit Thumbnails');
+                const landscapeFiles = [];
+                 for await (const entry of editDirHandle.values()) {
+                    if (entry.kind === 'file' && entry.name.match(/\.(jpe?g|png|gif|webp)$/i)) {
+                        const videoName = entry.name.substring(0, entry.name.lastIndexOf('_'));
+                        if (newVideoFileNames.has(videoName)) {
+                            landscapeFiles.push(await entry.getFile());
+                        }
                     }
                 }
 

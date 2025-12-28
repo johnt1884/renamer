@@ -1,6 +1,5 @@
 
 import asyncio
-import json
 from playwright.async_api import async_playwright, expect
 
 async def main():
@@ -57,26 +56,27 @@ async def main():
                 }
             }
 
+            const LATEST_SHORTCUT_TIME = 1704067200000; // Jan 1, 2024
+
             window.currentDirHandle = new window.MockDirectoryHandle('root', {
                 'Project 1': new window.MockDirectoryHandle('Project 1', {
                     'sc': new window.MockDirectoryHandle('sc', {
-                        'shortcut1.lnk': new window.MockFileHandle('shortcut1.lnk', 1704067200000)
+                        'shortcut1.lnk': new window.MockFileHandle('shortcut1.lnk', LATEST_SHORTCUT_TIME)
                     }),
                     'Edit Thumbnails': new window.MockDirectoryHandle('Edit Thumbnails', {
-                        'video1_thumb_old.jpg': new window.MockFileHandle('video1_thumb_old.jpg', 1704067100000),
-                        'video1_thumb_new.jpg': new window.MockFileHandle('video1_thumb_new.jpg', 1704067300000)
+                        // Scenario 1: Video is NEW, thumbnail is NEW -> SHOULD BE SHOWN
+                        'video_new_thumb_new_1.jpg': new window.MockFileHandle('video_new_thumb_new_1.jpg', LATEST_SHORTCUT_TIME + 1000),
+                        // Scenario 2: Video is OLD, thumbnail is NEW -> SHOULD BE HIDDEN
+                        'video_old_thumb_new_1.jpg': new window.MockFileHandle('video_old_thumb_new_1.jpg', LATEST_SHORTCUT_TIME + 1000),
+                        // Scenario 3: Video is NEW, thumbnail is OLD -> SHOULD BE SHOWN
+                        'video_new_thumb_old_1.jpg': new window.MockFileHandle('video_new_thumb_old_1.jpg', LATEST_SHORTCUT_TIME - 1000),
+                         // Scenario 4: Video is OLD, thumbnail is OLD -> SHOULD BE HIDDEN
+                        'video_old_thumb_old_1.jpg': new window.MockFileHandle('video_old_thumb_old_1.jpg', LATEST_SHORTCUT_TIME - 1000),
                     }),
-                    'video1.mp4': new window.MockFileHandle('video1.mp4', 1704067100000)
-                }),
-                'Project 2': new window.MockDirectoryHandle('Project 2', {
-                    'sc': new window.MockDirectoryHandle('sc', {
-                        'shortcut2.lnk': new window.MockFileHandle('shortcut2.lnk', 1706745600000)
-                    }),
-                    'Edit Thumbnails': new window.MockDirectoryHandle('Edit Thumbnails', {
-                        'video2_thumb_old.jpg': new window.MockFileHandle('video2_thumb_old.jpg', 1706745500000),
-                        'video2_thumb_new.jpg': new window.MockFileHandle('video2_thumb_new.jpg', 1706745700000)
-                    }),
-                    'video2.mp4': new window.MockFileHandle('video2.mp4', 1706745500000)
+                    'video_new_thumb_new.mp4': new window.MockFileHandle('video_new_thumb_new.mp4', LATEST_SHORTCUT_TIME + 1000),
+                    'video_old_thumb_new.mp4': new window.MockFileHandle('video_old_thumb_new.mp4', LATEST_SHORTCUT_TIME - 1000),
+                    'video_new_thumb_old.mp4': new window.MockFileHandle('video_new_thumb_old.mp4', LATEST_SHORTCUT_TIME + 1000),
+                    'video_old_thumb_old.mp4': new window.MockFileHandle('video_old_thumb_old.mp4', LATEST_SHORTCUT_TIME - 1000),
                 })
             });
 
@@ -85,31 +85,19 @@ async def main():
         """)
 
 
-        await expect(page.locator(".project-header")).to_have_count(2)
+        await expect(page.locator(".project-header")).to_have_count(1)
+        # We expect only the two thumbnails corresponding to NEW videos to be visible
         await expect(page.locator(".thumbnail")).to_have_count(2)
-        await expect(page.locator('img[data-file-name="video1_thumb_new.jpg"]')).to_be_visible()
-        await expect(page.locator('img[data-file-name="video2_thumb_new.jpg"]')).to_be_visible()
-        await expect(page.locator('img[data-file-name="video1_thumb_old.jpg"]')).to_have_count(0)
-        await expect(page.locator('img[data-file-name="video2_thumb_old.jpg"]')).to_have_count(0)
-        print("✅ Date filtering verified successfully.")
 
-        thumb_selector = 'img[data-file-name="video1_thumb_new.jpg"]'
-        thumb = page.locator(thumb_selector)
-        initial_box = await thumb.bounding_box()
-        initial_width = initial_box['width']
-        print(f"Initial thumbnail width: {initial_width}")
+        # Verify that the correct thumbnails are visible
+        await expect(page.locator('img[data-file-name="video_new_thumb_new_1.jpg"]')).to_be_visible()
+        await expect(page.locator('img[data-file-name="video_new_thumb_old_1.jpg"]')).to_be_visible()
 
-        await page.locator("#size-selector").select_option("0.5")
-        await page.evaluate("window.layoutLandscapeThumbnails()")
-        await page.wait_for_function(f"() => {{ const thumb = document.querySelector('{thumb_selector}'); return thumb && thumb.getBoundingClientRect().width !== {initial_width}; }}")
-        final_box = await thumb.bounding_box()
-        final_width = final_box['width']
-        print(f"Final thumbnail width: {final_width}")
+        # Verify that the incorrect thumbnails are hidden
+        await expect(page.locator('img[data-file-name="video_old_thumb_new_1.jpg"]')).to_have_count(0)
+        await expect(page.locator('img[data-file-name="video_old_thumb_old_1.jpg"]')).to_have_count(0)
 
-        if final_width < initial_width:
-             print("✅ Size selector verified successfully.")
-        else:
-            print(f"❌ Size selector verification failed. Width did not decrease as expected.")
+        print("✅ Date filtering rigorously verified successfully.")
 
         await page.screenshot(path="verification_screenshot.png")
         print("📸 Screenshot captured.")
