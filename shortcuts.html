@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Thumbnail Generator</title>
-    <style>
+    <title>Shortcuts</title>
+     <style>
         html, body {
             height: 100%;
             margin: 0;
@@ -15,29 +15,30 @@
         }
         .main-container {
             display: flex;
+            flex-direction: column;
             height: 100%;
         }
         .main-content {
             flex-grow: 1;
             display: flex;
             flex-direction: column;
-            overflow: hidden; /* Prevent the main content from causing page scroll */
+            overflow: hidden;
         }
         .top-bar {
-            padding: 10px 20px 10px 10px;
+            padding: 10px;
             border-bottom: 1px solid #444444;
             display: flex;
             align-items: center;
-            height: 36px; /* Match button height */
+            height: 36px;
             box-sizing: border-box;
             background-color: #1877f2;
         }
         .bottom-bar {
-            padding: 10px 10px 10px 10px;
+            padding: 10px;
             border-top: 1px solid #444444;
             display: flex;
             align-items: center;
-            height: 36px; /* Match button height */
+            height: 36px;
             box-sizing: border-box;
             background-color: #1877f2;
             color: white;
@@ -54,6 +55,7 @@
             object-fit: cover;
             border-radius: 6px;
             box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+            cursor: pointer;
         }
         .modal {
             display: none;
@@ -76,18 +78,12 @@
             width: 90%;
             max-width: 680px;
             box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-            animation: fadeIn 0.3s;
-        }
-        @keyframes fadeIn {
-            from {opacity: 0;}
-            to {opacity: 1;}
         }
         .close {
             color: #606770;
             float: right;
             font-size: 32px;
             font-weight: bold;
-            line-height: 1;
         }
         .close:hover,
         .close:focus {
@@ -95,55 +91,23 @@
             text-decoration: none;
             cursor: pointer;
         }
+        #batch-script {
+            width: 100%;
+            box-sizing: border-box;
+            border-radius: 6px;
+            border: 1px solid #ccd0d5;
+            padding: 8px;
+            font-family: "Courier New", Courier, monospace;
+            margin-top: 8px;
+            margin-bottom: 12px;
+            resize: vertical;
+        }
+        .landscape-row {
+            margin-bottom: 10px;
+        }
         .landscape-row.selected-shortcut {
             outline: 3px dashed orange;
         }
-        .landscape-row.selected-play {
-            outline: 3px solid cyan;
-        }
-
-        #video-overlay {
-            position: fixed;
-            background-color: rgba(0, 0, 0, 0.8);
-            z-index: 2000;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        #video-player-container {
-            position: relative;
-            width: 80%;
-            height: 80%;
-        }
-        #video-player {
-            width: 100%;
-            height: 100%;
-        }
-        #video-close-btn {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            cursor: pointer;
-            background: #fff;
-            border: none;
-            border-radius: 50%;
-            width: 30px;
-            height: 30px;
-            font-size: 16px;
-        }
-        #video-prev-btn, #video-next-btn {
-            position: absolute;
-            top: 50%;
-            transform: translateY(-50%);
-            cursor: pointer;
-            background: #fff;
-            border: none;
-            font-size: 24px;
-            padding: 10px;
-        }
-        #video-prev-btn { left: 10px; }
-        #video-next-btn { right: 10px; }
-
         select {
             height: 36px;
             padding: 0 8px 0 8px;
@@ -154,7 +118,7 @@
             border-radius: 0;
             font-size: 14px;
             box-sizing: border-box;
-            margin-right: 0;
+            margin-right: 10px;
             text-align: center;
             appearance: none;
             background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e");
@@ -162,50 +126,40 @@
             background-position: right 8px center;
             background-size: 16px;
         }
-        select:focus {
-            outline: none;
-            border-color: #166fe5;
-        }
         select option {
             padding: 8px 12px;
             background-color: #ffffff;
             color: #000000;
-            text-align: center;
         }
-        select option:nth-child(even) {
-            background-color: #f2f2f2;
-        }
-
-        .top-bar button, .bottom-bar button {
+        .bar-button {
             height: 36px;
-            padding: 0 8px;
+            padding: 0 12px;
             border: 1px solid #444444;
             background-color: #1877f2;
             color: #ffffff;
             border-radius: 0;
             font-size: 14px;
-            box-sizing: border-box;
-            margin-right: 0;
-            white-space: nowrap;
             cursor: pointer;
         }
-        .top-bar button:hover, .bottom-bar button:hover {
+        .bar-button:hover {
             background-color: #166fe5;
         }
-        .top-bar button:disabled, .bottom-bar button:disabled {
-            background-color: #666666;
-            cursor: not-allowed;
-        }
-        #shortcut-buttons button:not(:first-child) {
-            border-left: none;
+        .project-header {
+            color: #1c1e21;
+            font-size: 1.2em;
+            font-weight: bold;
+            margin-top: 20px;
+            margin-bottom: 10px;
+            border-bottom: 1px solid #ccc;
+            padding-bottom: 5px;
         }
     </style>
 </head>
 <body>
     <div class="main-container">
-        <div class="main-content" style="width: 100%; border-left: none;">
+        <div class="main-content">
             <div class="top-bar">
-                <button id="load-directory-btn">Load Directory</button>
+                <button id="load-directory-btn" class="bar-button">Load Directory</button>
                 <select id="size-selector">
                     <option value="0.2">20%</option>
                     <option value="0.3">30%</option>
@@ -218,3054 +172,317 @@
                     <option value="1" selected>100%</option>
                 </select>
                 <select id="sort-selector">
-                    <option value="" disabled hidden>Sort</option>
+                    <option value="" disabled selected hidden>Sort</option>
                     <option value="name-asc">Name (A-Z)</option>
                     <option value="name-desc">Name (Z-A)</option>
                     <option value="date-new">Date (Newest)</option>
                     <option value="date-old">Date (Oldest)</option>
-                    <option value="random">Random</option>
                 </select>
             </div>
-            <div id="thumbnail-container">
-                <div id="content-spacer" style="position: absolute; top: 0; left: 0; z-index: -1;"></div>
-            </div>
-            <div class="bottom-bar">
-                <div id="shortcut-buttons" style="display: flex;">
-                    <button id="deselect-row-btn">Deselect</button>
-                    <button id="shortcut-btn">Create Shortcut</button>
-                    <button id="generate-shortcut-script-btn" style="margin-left: 20px;" disabled>Generate Script</button>
+            <div id="content-area" style="display: flex; flex-grow: 1; overflow: hidden;">
+                <div id="thumbnail-container">
+                    <div id="content-spacer" style="position: absolute; top: 0; left: 0; z-index: -1;"></div>
                 </div>
             </div>
+            <div class="bottom-bar">
+                <button id="shortcut-script-btn" class="bar-button">Create Shortcut Script</button>
+            </div>
         </div>
     </div>
 
-    <div id="video-overlay" style="display: none;">
-        <div id="video-player-container">
-            <video id="video-player" controls></video>
-            <div id="video-filename-display" style="text-align: center; color: white; padding-top: 10px;"></div>
-            <button id="video-close-btn">X</button>
-            <button id="video-prev-btn">&lt;&lt;</button>
-            <button id="video-next-btn">&gt;&gt;</button>
-        </div>
-    </div>
-
-    <div id="final-shortcut-script-modal" class="modal">
+    <div id="script-modal" class="modal">
         <div class="modal-content">
             <span class="close">&times;</span>
-            <h2>PowerShell Script</h2>
-            <p>This script will process your selections. Right-click and "Run with PowerShell" in your main video directory.</p>
-            <textarea id="final-shortcut-batch-script" rows="10" cols="80" readonly></textarea>
-            <button id="copy-final-shortcut-script-btn">Copy to Clipboard</button>
-            <a id="download-final-shortcut-script-link" download="process_shortcuts.ps1">
+            <h2>Create Shortcut PowerShell Script</h2>
+            <p>This script will create shortcuts for your selections. Right-click and "Run with PowerShell" in your main video directory.</p>
+            <textarea id="batch-script" rows="10" cols="80" readonly></textarea>
+            <button id="copy-script-btn">Copy to Clipboard</button>
+            <a id="download-script-link" download="create_shortcuts.ps1">
                 <button>Download .ps1 File</button>
             </a>
         </div>
     </div>
 
     <script>
-        // --- IndexedDB Helpers ---
-        function getDb(key) {
-            return new Promise((resolve, reject) => {
-                const request = indexedDB.open('thumbnail-tool-db', 1);
-                request.onupgradeneeded = () => request.result.createObjectStore('store');
-                request.onsuccess = () => {
-                    const tx = request.result.transaction('store', 'readonly');
-                    const store = tx.objectStore('store');
-                    const req = store.get(key);
-                    req.onsuccess = () => resolve(req.result);
-                    req.onerror = () => reject(req.error);
-                    tx.oncomplete = () => request.result.close();
-                };
-                request.onerror = () => reject(request.error);
-            });
-        }
-
-
-        function setDb(key, value) {
-            return new Promise((resolve, reject) => {
-                const request = indexedDB.open('thumbnail-tool-db', 1);
-                request.onupgradeneeded = () => request.result.createObjectStore('store');
-                request.onsuccess = () => {
-                    const tx = request.result.transaction('store', 'readwrite');
-                    const store = tx.objectStore('store');
-                    const req = store.put(value, key);
-                    req.onsuccess = () => resolve();
-                    req.onerror = () => reject(req.error);
-                    tx.oncomplete = () => request.result.close();
-                };
-                request.onerror = () => reject(request.error);
-            });
-        }
-
-        // --- New LocalStorage Helpers ---
-        const APP_VERSION = "2.0";
-
-        function loadProjectData(dirName) {
-            const rawData = localStorage.getItem(`projectData-${dirName}`);
-            let data = {
-                version: APP_VERSION,
-                projectUsername: '',
-                numElements: 1,
-                fontSize: 14,
-                verticalPadding: 10,
-                horizontalPadding: 10,
-                previewVerticalPadding: 5,
-                customButtonTree: [],
-                collapseState: {},
-                buttonVisibility: {},
-                canvases: null,
-                layouts: {},
-                previewSidebarVisible: false,
-                previewSidebarWidth: 250,
-                previewThumbnailSize: '0.5',
-                addWritingElement: false,
-                writingElementNumber: 1,
-                hiddenOrphans: [],
-                listViewShowThumbnails: false,
-                listViewShowCanvasName: false,
-                listViewShowOriginalFilename: false
-            };
-
-            if (rawData) {
-                try {
-                    const savedData = JSON.parse(rawData);
-                    // Merge saved data, ensuring all keys from the default object are present
-                    data = { ...data, ...savedData };
-                } catch (e) {
-                    console.error("Failed to parse project data, using defaults.", e);
-                }
-            }
-            return data;
-        }
-
-        function saveProjectData(dirName, data) {
-            data.version = APP_VERSION;
-            localStorage.setItem(`projectData-${dirName}`, JSON.stringify(data));
-        }
-
-        const directoryPicker = document.getElementById('directory-picker');
         const thumbnailContainer = document.getElementById('thumbnail-container');
         const scriptModal = document.getElementById('script-modal');
-        const filenameBuilderModal = document.getElementById('filename-builder-modal');
         const batchScriptTextArea = document.getElementById('batch-script');
         const copyScriptBtn = document.getElementById('copy-script-btn');
         const downloadScriptLink = document.getElementById('download-script-link');
-        const reloadPageBtn = document.getElementById('reload-page-btn');
         const sizeSelector = document.getElementById('size-selector');
-        var directoryName = '';
-        const loadButton = document.getElementById('load-directory-btn');
-        const contentSpacer = document.getElementById('content-spacer');
         const sortSelector = document.getElementById('sort-selector');
+        const loadButton = document.getElementById('load-directory-btn');
+        const shortcutScriptBtn = document.getElementById('shortcut-script-btn');
+        const contentSpacer = document.getElementById('content-spacer');
 
         let allVideoFiles = [];
-        var landscapeSelectionMode = '';
-        var shortcutSelections = new Set();
-
-        const videoOverlay = document.getElementById('video-overlay');
-        const videoPlayer = document.getElementById('video-player');
-        const videoCloseBtn = document.getElementById('video-close-btn');
-        const videoPrevBtn = document.getElementById('video-prev-btn');
-        const videoNextBtn = document.getElementById('video-next-btn');
-        let playlist = [];
-        let currentPlaylistIndex = -1;
-        let currentVideoUrl = null;
-
-        function loadVideo(index) {
-            if (currentVideoUrl) {
-                URL.revokeObjectURL(currentVideoUrl);
-            }
-
-            currentPlaylistIndex = index;
-            const videoName = playlist[index];
-
-            document.getElementById('video-filename-display').textContent = videoName;
-
-            const videoFile = allVideoFiles.find(f => f.name.startsWith(videoName));
-
-            if (videoFile) {
-                currentVideoUrl = URL.createObjectURL(videoFile);
-                videoPlayer.src = currentVideoUrl;
-                videoPlayer.play();
-            } else {
-                console.error(`Video file not found for thumbnail row: ${videoName}`);
-                alert(`Could not find the video file for ${videoName}. Check the console for more details.`);
-            }
-
-            videoPrevBtn.style.display = index > 0 ? 'block' : 'none';
-            videoNextBtn.style.display = index < playlist.length - 1 ? 'block' : 'none';
-        }
+        let shortcutSelections = new Set();
+        let currentDirHandle;
 
         function updateContentSpacer() {
-            const rows = document.querySelectorAll('.landscape-row');
-            if (rows.length === 0) {
-                contentSpacer.style.width = '0px';
+            const elements = document.querySelectorAll('.landscape-row, .project-header, hr');
+            if (elements.length === 0) {
                 contentSpacer.style.height = '0px';
                 return;
             }
-
-            let maxRight = 0;
             let maxBottom = 0;
-
-            rows.forEach(row => {
-                const right = row.offsetLeft + row.offsetWidth;
-                const bottom = row.offsetTop + row.offsetHeight;
-                if (right > maxRight) maxRight = right;
+            elements.forEach(el => {
+                const bottom = el.offsetTop + el.offsetHeight;
                 if (bottom > maxBottom) maxBottom = bottom;
             });
-
-            contentSpacer.style.width = (maxRight + 20) + 'px';
             contentSpacer.style.height = (maxBottom + 20) + 'px';
-        }
-
-        async function init() {
-            // Placeholder for any auto-load logic if needed in the future
-        }
-
-
-        loadButton.addEventListener('click', async () => {
-            try {
-                const dirHandle = await window.showDirectoryPicker();
-                const projectDirs = await findProjectDirs(dirHandle);
-                if (projectDirs.length > 0) {
-                    await renderShortcutMode(projectDirs);
-                } else {
-                    alert('No valid project directories with an "Edit Thumbnails" folder were found.');
-                }
-            } catch (err) {
-                if (err.name !== 'AbortError') console.error('Failed to open directory:', err);
-            }
-        });
-
-        document.getElementById('shortcut-btn').addEventListener('click', () => {
-            landscapeSelectionMode = landscapeSelectionMode === 'shortcut' ? '' : 'shortcut';
-            updateSelectionModeButtons();
-        });
-
-        document.getElementById('select-btn').addEventListener('click', () => {
-            landscapeSelectionMode = landscapeSelectionMode === 'play' ? '' : 'play';
-            updateSelectionModeButtons();
-        });
-
-        sortSelector.addEventListener('change', (e) => {
-            const value = e.target.value;
-            if (value) {
-                sortEditModeRows(value);
-                e.target.value = ''; // Reset to placeholder
-            }
-        });
-
-        videoCloseBtn.addEventListener('click', () => {
-            videoOverlay.style.display = 'none';
-            videoPlayer.pause();
-            if (currentVideoUrl) {
-                URL.revokeObjectURL(currentVideoUrl);
-                currentVideoUrl = null;
-            }
-        });
-        videoPrevBtn.addEventListener('click', () => {
-            if (currentPlaylistIndex > 0) {
-                loadVideo(currentPlaylistIndex - 1);
-            }
-        });
-        videoNextBtn.addEventListener('click', () => {
-            if (currentPlaylistIndex < playlist.length - 1) {
-                loadVideo(currentPlaylistIndex + 1);
-            }
-        });
-
-        sizeSelector.addEventListener('change', (event) => {
-            layoutLandscapeThumbnails();
-        });
-
-        async function findProjectDirs(baseDirHandle) {
-            const projectDirs = [];
-
-            // Check if the base directory itself is a project
-            try {
-                await baseDirHandle.getDirectoryHandle('Edit Thumbnails');
-                projectDirs.push(baseDirHandle);
-                return projectDirs; // If base is a project, don't look at subdirs
-            } catch (e) {
-                // Not a project dir itself, so let's check subdirectories
-            }
-
-            // Iterate through subdirectories
-            for await (const entry of baseDirHandle.values()) {
-                if (entry.kind === 'directory') {
-                    try {
-                        await entry.getDirectoryHandle('Edit Thumbnails');
-                        projectDirs.push(entry); // This subdir is a valid project
-                    } catch (e) {
-                        // This subdir is not a project, ignore
-                    }
-                }
-            }
-
-            return projectDirs;
-        }
-
-        async function renderShortcutMode(projectDirs) {
-            thumbnailContainer.innerHTML = '';
-            allVideoFiles = []; // Reset video files list
-            shortcutSelections = new Set();
-            playSelections = new Set();
-
-            for (const dirHandle of projectDirs) {
-                // Collect video files for this project
-                async function findVideos(handle, pathPrefix = '') {
-                    for await (const entry of handle.values()) {
-                        if (entry.kind === 'file' && entry.name.match(/\.(mp4|avi|mov|mkv)$/i)) {
-                            const file = await entry.getFile();
-                            file.customPath = pathPrefix;
-                            file.projectDirHandle = dirHandle;
-                            allVideoFiles.push(file);
-                        }
-                    }
-                }
-                await findVideos(dirHandle, '');
-                for (const subDir of ['Landscape', 'Landscape Rotate', 'Edit']) {
-                    try {
-                        const subDirHandle = await dirHandle.getDirectoryHandle(subDir);
-                        await findVideos(subDirHandle, subDir);
-                    } catch (e) { /* Subdirectory doesn't exist, which is fine. */ }
-                }
-
-                let latestShortcutTime = 0;
-                try {
-                    const scDirHandle = await dirHandle.getDirectoryHandle('sc');
-                    for await (const entry of scDirHandle.values()) {
-                        if (entry.kind === 'file' && entry.name.endsWith('.lnk')) {
-                            const file = await entry.getFile();
-                            if (file.lastModified > latestShortcutTime) {
-                                latestShortcutTime = file.lastModified;
-                            }
-                        }
-                    }
-                } catch (e) {
-                    // sc directory doesn't exist, so all thumbnails are new
-                }
-
-                const editThumbnailsDirHandle = await dirHandle.getDirectoryHandle('Edit Thumbnails');
-                const newThumbnails = [];
-                for await (const entry of editThumbnailsDirHandle.values()) {
-                     if (entry.kind === 'file' && entry.name.match(/\.(jpe?g|png|gif|webp)$/i)) {
-                        const file = await entry.getFile();
-                        if (file.lastModified > latestShortcutTime) {
-                            newThumbnails.push(file);
-                        }
-                    }
-                }
-
-                if (newThumbnails.length > 0) {
-                    const header = document.createElement('h2');
-                    header.textContent = dirHandle.name;
-                    header.style.color = 'black';
-                    thumbnailContainer.appendChild(header);
-
-                    const groupedFiles = newThumbnails.reduce((acc, file) => {
-                        const videoName = file.name.substring(0, file.name.lastIndexOf('_'));
-                        if (!acc[videoName]) acc[videoName] = [];
-                        acc[videoName].push(file);
-                        return acc;
-                    }, {});
-
-                    const videoNames = Object.keys(groupedFiles).sort();
-                    const allPromises = [];
-
-                    for (const videoName of videoNames) {
-                        const files = groupedFiles[videoName];
-                        files.sort((a, b) => {
-                            const aNum = parseInt(a.name.substring(a.name.lastIndexOf('_') + 1));
-                            const bNum = parseInt(b.name.substring(b.name.lastIndexOf('_') + 1));
-                            return aNum - bNum;
-                        });
-
-                        const rowDiv = document.createElement('div');
-                        rowDiv.classList.add('landscape-row');
-                        rowDiv.dataset.videoName = videoName;
-                        rowDiv.dataset.projectDir = dirHandle.name;
-                        thumbnailContainer.appendChild(rowDiv);
-
-                        rowDiv.addEventListener('click', () => {
-                             if (landscapeSelectionMode !== 'shortcut') {
-                                alert('Please select the "Create Shortcut" mode first.');
-                                return;
-                            }
-
-                            if (shortcutSelections.has(videoName)) {
-                                shortcutSelections.delete(videoName);
-                            } else {
-                                shortcutSelections.add(videoName);
-                            }
-
-                            rowDiv.classList.toggle('selected-shortcut', shortcutSelections.has(videoName));
-                            document.getElementById('generate-shortcut-script-btn').disabled = shortcutSelections.size === 0;
-                        });
-
-                        const imageLoadPromises = files.map(file => {
-                            return new Promise((resolve, reject) => {
-                                const img = new Image();
-                                img.onload = () => {
-                                    img.classList.add('thumbnail');
-                                    img.dataset.fileName = file.name;
-                                    img.dataset.originalWidth = img.width;
-                                    img.dataset.originalHeight = img.height;
-                                    rowDiv.appendChild(img);
-                                    resolve(img);
-                                };
-                                img.onerror = reject;
-                                img.src = URL.createObjectURL(file);
-                            });
-                        });
-                        allPromises.push(Promise.all(imageLoadPromises));
-                    }
-
-                    await Promise.all(allPromises);
-                    const hr = document.createElement('hr');
-                    thumbnailContainer.appendChild(hr);
-                }
-            }
-             layoutLandscapeThumbnails();
-        }
-
-        async function loadRecentDirectories() {
-            const recentDirs = await getDb('recentDirectories') || [];
-            const list = document.getElementById('recent-directories-list');
-            list.innerHTML = '';
-
-            if (recentDirs.length > 0) {
-                for (const dir of recentDirs) {
-                    const a = document.createElement('a');
-                    a.href = '#';
-                    a.textContent = dir.name;
-                    a.title = dir.name;
-                    a.addEventListener('click', async (e) => {
-                        e.preventDefault();
-                        // --- Validate handle before use ---
-                        if (!dir.handle || typeof dir.handle.queryPermission !== 'function') {
-                            alert('This directory reference is stale. Please re-select it using "Load Directory".');
-                            await removeDirectory(dir.name);
-                            return;
-                        }
-
-                        try {
-                            const hasPermission = await dir.handle.queryPermission({ mode: 'read' }) === 'granted' ||
-                                                  await dir.handle.requestPermission({ mode: 'read' }) === 'granted';
-                            if (hasPermission) {
-                                await processDirectory(dir.handle);
-                                document.getElementById('cog-dropdown').style.display = 'none'; // Close menu after loading
-                            }
-                        } catch(e) {
-                            alert('Could not access directory. It may have been moved, deleted, or permissions were denied.');
-                            await removeDirectory(dir.name);
-                        }
-                    });
-                    list.appendChild(a);
-                }
-            } else {
-                const a = document.createElement('a');
-                a.href = '#';
-                a.textContent = 'No recent directories';
-                a.style.pointerEvents = 'none';
-                list.appendChild(a);
-            }
-        }
-
-        async function removeDirectory(dirName) {
-            let recentDirs = await getDb('recentDirectories') || [];
-            recentDirs = recentDirs.filter(d => d.name !== dirName);
-            await setDb('recentDirectories', recentDirs);
-            await loadRecentDirectories();
-        }
-
-        async function renderEditMode() {
-            thumbnailContainer.innerHTML = ''; // Clear container for a clean slate
-            document.getElementById('landscape-buttons').style.display = 'flex'; // Ensure buttons are visible
-
-
-            const editDirHandle = await currentDirHandle.getDirectoryHandle('Edit Thumbnails');
-            let landscapeFiles = [];
-            for await (const entry of editDirHandle.values()) {
-                if (entry.kind === 'file' && entry.name.match(/\.(jpe?g|png|gif|webp)$/i)) {
-                    landscapeFiles.push(await entry.getFile());
-                }
-            }
-
-
-            const groupedFiles = landscapeFiles.reduce((acc, file) => {
-                const videoName = file.name.substring(0, file.name.lastIndexOf('_'));
-                if (!acc[videoName]) {
-                    acc[videoName] = [];
-                }
-                acc[videoName].push(file);
-                return acc;
-            }, {});
-
-            const videoNames = Object.keys(groupedFiles).sort();
-            const allPromises = [];
-
-            for (const videoName of videoNames) {
-                const files = groupedFiles[videoName];
-                files.sort((a, b) => {
-                    const aNum = parseInt(a.name.substring(a.name.lastIndexOf('_') + 1));
-                    const bNum = parseInt(b.name.substring(b.name.lastIndexOf('_') + 1));
-                    return aNum - bNum;
-                });
-
-                const rowDiv = document.createElement('div');
-                rowDiv.classList.add('landscape-row');
-                rowDiv.dataset.videoName = videoName;
-                thumbnailContainer.appendChild(rowDiv);
-
-                rowDiv.addEventListener('click', () => {
-                    const selections = {
-                        'landscape': landscapeSelections,
-                        'landscape-rotate': landscapeRotateSelections,
-                        'delete': deleteSelections,
-                        'edit': editSelections,
-                        'shortcut': shortcutSelections,
-                        'play': playSelections
-                    };
-
-                    if (!landscapeSelectionMode) {
-                        alert('Please select a mode from the bottom bar first.');
-                        return;
-                    }
-
-                    // Toggle selection for the current mode
-                    if (selections[landscapeSelectionMode].has(videoName)) {
-                        selections[landscapeSelectionMode].delete(videoName);
-                    } else {
-                        selections[landscapeSelectionMode].add(videoName);
-                        // Ensure mutual exclusivity
-                        for (const mode in selections) {
-                            if (mode !== landscapeSelectionMode) {
-                                selections[mode].delete(videoName);
-                            }
-                        }
-                    }
-
-                    // Update UI classes
-                    rowDiv.classList.toggle('selected-landscape', landscapeSelections.has(videoName));
-                    rowDiv.classList.toggle('selected-landscape-rotate', landscapeRotateSelections.has(videoName));
-                    rowDiv.classList.toggle('selected-delete', deleteSelections.has(videoName));
-                    rowDiv.classList.toggle('selected-edit', editSelections.has(videoName));
-                    rowDiv.classList.toggle('selected-shortcut', shortcutSelections.has(videoName));
-                    rowDiv.classList.toggle('selected-play', playSelections.has(videoName));
-                    updatePlayButtonState();
-                });
-
-                 // Re-apply selection classes on initial render
-                if (landscapeSelections.has(videoName)) rowDiv.classList.add('selected-landscape');
-                if (landscapeRotateSelections.has(videoName)) rowDiv.classList.add('selected-landscape-rotate');
-                if (deleteSelections.has(videoName)) rowDiv.classList.add('selected-delete');
-                if (editSelections.has(videoName)) rowDiv.classList.add('selected-edit');
-                if (shortcutSelections.has(videoName)) rowDiv.classList.add('selected-shortcut');
-                if (playSelections.has(videoName)) rowDiv.classList.add('selected-play');
-
-                const imageLoadPromises = files.map(file => {
-                    return new Promise((resolve, reject) => {
-                        const img = new Image();
-                        img.onload = () => {
-                            img.classList.add('thumbnail');
-                            img.dataset.fileName = file.name;
-                            img.dataset.originalWidth = img.width;
-                            img.dataset.originalHeight = img.height;
-                            rowDiv.appendChild(img);
-                            resolve(img);
-                        };
-                        img.onerror = reject;
-                        img.src = URL.createObjectURL(file);
-                    });
-                });
-                allPromises.push(Promise.all(imageLoadPromises));
-            }
-
-            await Promise.all(allPromises);
-            layoutLandscapeThumbnails(); // Position and size after all images are loaded
         }
 
         function layoutLandscapeThumbnails() {
             const scale = parseFloat(sizeSelector.value);
-            let yOffset = 20;
-            const rows = document.querySelectorAll('.landscape-row');
+            const elements = document.querySelectorAll('.landscape-row, .project-header, hr');
 
-            rows.forEach(row => {
-                row.style.position = 'absolute';
-                row.style.top = yOffset + 'px';
-                let xOffset = 20;
-                let maxRowHeight = 0;
-                let totalRowWidth = 0;
-                const thumbnails = row.querySelectorAll('.thumbnail');
-
-                thumbnails.forEach((thumb, index) => {
-                    const originalWidth = parseFloat(thumb.dataset.originalWidth);
-                    const originalHeight = parseFloat(thumb.dataset.originalHeight);
-
-                    const scaledWidth = originalWidth * scale;
-                    const scaledHeight = originalHeight * scale;
-
-                    thumb.style.position = 'absolute';
-                    thumb.style.width = scaledWidth + 'px';
-                    thumb.style.height = scaledHeight + 'px';
-                    thumb.style.left = xOffset + 'px';
-                    thumb.style.top = '0px'; // Position relative to the row
-
-                    xOffset += scaledWidth + 20;
-                    if (scaledHeight > maxRowHeight) {
-                        maxRowHeight = scaledHeight;
-                    }
-                });
-
-                if (thumbnails.length > 0) {
-                    totalRowWidth = xOffset;
-                    row.style.width = totalRowWidth + 'px';
-                    row.style.height = maxRowHeight + 'px';
-                    yOffset += maxRowHeight + 20;
-                }
-            });
-             updateContentSpacer();
-        }
-
-        function generateEditBatchScript(videoFiles) {
-            const scriptLines = [
-                '@echo off',
-                'setlocal enabledelayedexpansion',
-                'cd /d "%~dp0"',
-                'echo Creating Edit Thumbnails directory...',
-                'if not exist "Edit Thumbnails" mkdir "Edit Thumbnails"',
-                'echo Generating edit thumbnails and updating tracking file...',
-                '> processed_edit_mode_videos.txt (',
-                ...videoFiles.map(file => `    echo "${file.name}"`),
-                ')',
-                '',
-                ...videoFiles.flatMap(file => {
-                    const fileName = file.name;
-                    const baseName = fileName.substring(0, fileName.lastIndexOf('.'));
-                    return [
-                        '',
-                        `echo Processing "${fileName}"...`,
-                        `for /f "delims=" %%a in ('ffprobe -v error -show_entries format^=duration -of default^=noprint_wrappers^=1:nokey^=1 "${fileName}"') do (`,
-                        '    set "duration_str=%%a"',
-                        ')',
-                        'for /f "delims=." %%a in ("!duration_str!") do set "duration_int=%%a"',
-                        'if !duration_int! equ 0 set "duration_int=10"', // Avoid division by zero for very short videos
-                        'set /a "interval = !duration_int! / 10"',
-                        'if !interval! equ 0 set "interval=1"', // Ensure at least 1s interval for very short videos
-                        'for /l %%i in (1, 1, 10) do (',
-                        '    set /a "timestamp = (%%i - 1) * !interval!"',
-                        `    echo   - Generating thumbnail %%i for "${fileName}" at !timestamp!s...`,
-                        `    ffmpeg -ss !timestamp! -i "${fileName}" -vframes 1 -vf "scale=256:256:force_original_aspect_ratio=decrease" -y "Edit Thumbnails\\${baseName}_%%i.jpg" >nul 2>&1 || echo Failed to generate thumbnail %%i for "${fileName}"`,
-                        ')'
-                    ];
-                }),
-                'echo.',
-                'echo Thumbnail generation complete.',
-                'pause'
-            ];
-            const script = scriptLines.join('\r\n');
-            document.getElementById('edit-batch-script').value = script;
-            const blob = new Blob([script], { type: 'text/plain;charset=utf-8' });
-            document.getElementById('download-edit-script-link').href = URL.createObjectURL(blob);
-        }
-
-        async function applySelections() {
-            const applyBtn = document.getElementById('apply-selections-btn');
-            const blue = '#1877f2';
-            const red = '#d93025';
-
-            if (selectionsToggledOn) {
-                // Toggle off
-                selectionsToggledOn = false;
-                applyBtn.style.backgroundColor = blue;
-                // Clear only the selections that were applied from the file
-                // This is a simplification; a more robust solution would store the exact selections
-                shortcutSelections.clear();
-                landscapeSelections.clear();
-                landscapeRotateSelections.clear();
-                editSelections.clear();
-            } else {
-                // Toggle on
-                try {
-                    const fileHandle = await currentDirHandle.getFileHandle('selections.txt');
-                    const file = await fileHandle.getFile();
-                    const contents = await file.text();
-
-                    const lines = contents.split('\n');
-                    let currentDirectory = '';
-
-                    lines.forEach(line => {
-                        const trimmedLine = line.trim();
-                        if (trimmedLine.startsWith('#')) {
-                            currentDirectory = trimmedLine.substring(1).trim().toLowerCase();
-                        } else if (trimmedLine) {
-                            let baseFilename = trimmedLine;
-                            if (currentDirectory === 'sc' && baseFilename.toLowerCase().endsWith('.lnk')) {
-                                baseFilename = baseFilename.slice(0, -4);
-                            }
-                            const videoName = baseFilename.replace(/\.[^/.]+$/, "");
-
-                            const row = thumbnailContainer.querySelector(`.landscape-row[data-video-name="${videoName}"]`);
-                            if (row) {
-                                let targetSet;
-                                switch (currentDirectory) {
-                                    case 'sc':
-                                        targetSet = shortcutSelections;
-                                        break;
-                                    case 'landscape':
-                                        targetSet = landscapeSelections;
-                                        break;
-                                    case 'landscape rotate':
-                                        targetSet = landscapeRotateSelections;
-                                        break;
-                                    case 'edit':
-                                        targetSet = editSelections;
-                                        break;
-                                }
-                                if (targetSet && !targetSet.has(videoName)) {
-                                    targetSet.add(videoName);
-                                }
-                            }
-                        }
+            elements.forEach(element => {
+                if (element.classList.contains('landscape-row')) {
+                    let maxRowHeight = 0;
+                    const thumbnails = element.querySelectorAll('.thumbnail');
+                    thumbnails.forEach(thumb => {
+                        const originalWidth = parseFloat(thumb.dataset.originalWidth);
+                        const originalHeight = parseFloat(thumb.dataset.originalHeight);
+                        const scaledWidth = originalWidth * scale;
+                        const scaledHeight = originalHeight * scale;
+                        thumb.style.width = scaledWidth + 'px';
+                        thumb.style.height = scaledHeight + 'px';
+                        thumb.style.marginRight = '10px';
+                        if (scaledHeight > maxRowHeight) maxRowHeight = scaledHeight;
                     });
-                    selectionsToggledOn = true;
-                    applyBtn.style.backgroundColor = red;
-
-                    // Store initial state
-                    initialLandscapeSelections = new Set(landscapeSelections);
-                    initialLandscapeRotateSelections = new Set(landscapeRotateSelections);
-                    initialEditSelections = new Set(editSelections);
-                    initialShortcutSelections = new Set(shortcutSelections);
-
-                } catch (e) {
-                    if (e.name === 'NotFoundError') {
-                        alert('selections.txt not found. Please create it first.');
-                    } else {
-                        console.error('Failed to apply selections:', e);
-                        alert('An error occurred while applying selections. See the console for details.');
-                    }
-                    return; // Stop execution if there was an error
+                    element.style.height = maxRowHeight + 'px';
                 }
-            }
-
-            // Update UI based on the new selections state
-            document.querySelectorAll('.landscape-row').forEach(row => {
-                const videoName = row.dataset.videoName;
-                row.classList.toggle('selected-shortcut', shortcutSelections.has(videoName));
-                row.classList.toggle('selected-landscape', landscapeSelections.has(videoName));
-                row.classList.toggle('selected-landscape-rotate', landscapeRotateSelections.has(videoName));
-                row.classList.toggle('selected-edit', editSelections.has(videoName));
             });
-
-            updatePlayButtonState();
-        }
-
-        async function createOrUpdateSelectionsFile() {
-            let selectionsContent = '';
-            const subdirectories = ['Landscape', 'Landscape Rotate', 'Edit'];
-
-            for (const subdirName of subdirectories) {
-                try {
-                    const subdirHandle = await currentDirHandle.getDirectoryHandle(subdirName);
-                    selectionsContent += `# ${subdirName}\n`;
-                    const entries = [];
-                    for await (const entry of subdirHandle.values()) {
-                        entries.push(entry);
-                    }
-                    for (const entry of entries) {
-                        if (entry.kind === 'file') {
-                            selectionsContent += `${entry.name}\n`;
-                        }
-                    }
-                    selectionsContent += '\n';
-                } catch (e) {
-                    // Directory doesn't exist, which is fine.
-                }
-            }
-
-            try {
-                const fileHandle = await currentDirHandle.getFileHandle('selections.txt', { create: true });
-                const writable = await fileHandle.createWritable();
-                await writable.write(selectionsContent);
-                await writable.close();
-                alert('selections.txt has been created/updated successfully.');
-            } catch (e) {
-                console.error('Failed to write selections.txt:', e);
-                alert('There was an error writing to selections.txt. See the console for details.');
-            }
-        }
-
-        sizeSelector.addEventListener('change', (event) => {
-            layoutLandscapeThumbnails();
-        });
-
-        document.getElementById('shortcut-btn').addEventListener('click', () => {
-            landscapeSelectionMode = landscapeSelectionMode === 'shortcut' ? '' : 'shortcut';
-            updateSelectionModeButtons();
-        });
-
-        function updateSelectionModeButtons() {
-            const blue = '#1877f2';
-            const red = '#d93025';
-            document.getElementById('shortcut-btn').style.backgroundColor = landscapeSelectionMode === 'shortcut' ? red : blue;
+            requestAnimationFrame(updateContentSpacer);
         }
 
         function generateShortcutScript() {
-            if (shortcutSelections.size === 0) {
-                alert("No shortcuts selected.");
-                return;
-            }
-
             const groupedByProject = new Map();
-            for (const videoName of shortcutSelections) {
-                const videoFile = allVideoFiles.find(f => f.name.startsWith(videoName));
-                if (videoFile && videoFile.projectDirHandle) {
-                    const projectName = videoFile.projectDirHandle.name;
-                    if (!groupedByProject.has(projectName)) {
-                        groupedByProject.set(projectName, []);
-                    }
-                    groupedByProject.get(projectName).push(videoFile);
+            shortcutSelections.forEach(sel => {
+                if (!groupedByProject.has(sel.projectPath)) {
+                    groupedByProject.set(sel.projectPath, []);
                 }
-            }
+                groupedByProject.get(sel.projectPath).push(sel.videoName);
+            });
 
-            const scriptLines = [
-                '# PowerShell Script to create shortcuts',
-                '$PSScriptRoot = Split-Path -Parent $MyInvocation.MyCommand.Definition',
+            let scriptLines = [
+                '$PSScriptRoot = Split-Path -Parent -Path $MyInvocation.MyCommand.Definition',
                 '$wshell = New-Object -ComObject WScript.Shell',
                 ''
             ];
 
-            for (const [projectName, videoFiles] of groupedByProject.entries()) {
-                const projectPathVar = `$projectPath_${projectName.replace(/[\s-]/g, '_')}`;
-                scriptLines.push(`# --- Processing Project: ${projectName} ---`);
-                scriptLines.push(`${projectPathVar} = Join-Path -Path $PSScriptRoot -ChildPath '${projectName}'`);
-                scriptLines.push(`$scPath = Join-Path -Path ${projectPathVar} -ChildPath 'sc'`);
-                scriptLines.push('if (-not (Test-Path -LiteralPath $scPath)) { New-Item -ItemType Directory -Path $scPath }');
+            groupedByProject.forEach((videoNames, projectPath) => {
+                const projectPathPS = projectPath ? `Join-Path -Path $PSScriptRoot -ChildPath '${projectPath}'` : '$PSScriptRoot';
+                const scDirPS = `Join-Path -Path (${projectPathPS}) -ChildPath 'sc'`;
 
-                videoFiles.forEach(videoFile => {
-                    const targetPath = videoFile.customPath
-                        ? `Join-Path -Path ${projectPathVar} -ChildPath '${videoFile.customPath}\\${videoFile.name}'`
-                        : `Join-Path -Path ${projectPathVar} -ChildPath '${videoFile.name}'`;
-                    const shortcutPath = `Join-Path -Path $scPath -ChildPath '${videoFile.name}.lnk'`;
+                scriptLines.push(`Write-Host "Processing project: ${projectPath || '(Root)'}"`);
+                scriptLines.push(`if (-not (Test-Path -LiteralPath ${scDirPS})) { New-Item -ItemType Directory -Path ${scDirPS} }`);
 
-                    scriptLines.push(`$shortcut = $wshell.CreateShortcut(${shortcutPath})`);
-                    scriptLines.push(`$shortcut.TargetPath = ${targetPath}`);
-                    scriptLines.push(`$shortcut.Save()`);
+                videoNames.forEach(videoName => {
+                    const videoFile = allVideoFiles.find(f => f.name.startsWith(videoName));
+                    if (videoFile) {
+                        const targetPathPS = `Join-Path -Path (${projectPathPS}) -ChildPath '${videoFile.name}'`;
+                        const shortcutPathPS = `Join-Path -Path (${scDirPS}) -ChildPath '${videoFile.name}.lnk'`;
+                        scriptLines.push(`$shortcut = $wshell.CreateShortcut(${shortcutPathPS})`);
+                        scriptLines.push(`$shortcut.TargetPath = ${targetPathPS}`);
+                        scriptLines.push(`$shortcut.Save()`);
+                    }
                 });
                 scriptLines.push('');
-            }
+            });
 
             scriptLines.push('Write-Host "Shortcut creation complete."');
             scriptLines.push('Read-Host -Prompt "Press Enter to exit"');
 
             const script = scriptLines.join('\r\n');
-            document.getElementById('final-shortcut-batch-script').value = script;
+            batchScriptTextArea.value = script;
             const blob = new Blob([script], { type: 'text/plain;charset=utf-8' });
-            document.getElementById('download-final-shortcut-script-link').href = URL.createObjectURL(blob);
-            document.getElementById('final-shortcut-script-modal').style.display = 'block';
+            downloadScriptLink.href = URL.createObjectURL(blob);
         }
 
-        document.getElementById('final-shortcut-script-modal').querySelector('.close').addEventListener('click', () => {
-            document.getElementById('final-shortcut-script-modal').style.display = 'none';
-        });
-        document.getElementById('copy-final-shortcut-script-btn').addEventListener('click', () => {
-            const scriptTextArea = document.getElementById('final-shortcut-batch-script');
-            scriptTextArea.select();
-            navigator.clipboard.writeText(scriptTextArea.value).then(() => {
-                alert('Script copied to clipboard!');
-            });
-        });
-        document.getElementById('generate-shortcut-script-btn').addEventListener('click', generateShortcutScript);
-
-        document.getElementById('deselect-row-btn').addEventListener('click', () => {
+        async function renderShortcutMode(sortBy = 'name-asc') {
+            thumbnailContainer.innerHTML = '';
             shortcutSelections.clear();
-            playSelections.clear();
-            document.querySelectorAll('.landscape-row').forEach(row => {
-                row.classList.remove('selected-shortcut', 'selected-play');
-            });
-            document.getElementById('generate-shortcut-script-btn').disabled = true;
-        });
 
-        document.getElementById('generate-rename-script-btn').addEventListener('click', () => {
-            generateRenameScript();
-            document.getElementById('move-rename-script-modal').style.display = 'block';
-        });
-
-        document.getElementById('move-rename-script-modal').querySelector('.close').addEventListener('click', () => {
-            document.getElementById('move-rename-script-modal').style.display = 'none';
-        });
-
-        document.getElementById('copy-move-rename-script-btn').addEventListener('click', () => {
-            const scriptTextArea = document.getElementById('move-rename-batch-script');
-            scriptTextArea.select();
-            navigator.clipboard.writeText(scriptTextArea.value).then(() => {
-                alert('Script copied to clipboard!');
-                document.getElementById('reload-move-rename-script-page-btn').style.display = 'inline-block';
-            });
-        });
-
-        document.getElementById('download-move-rename-script-link').addEventListener('click', () => {
-            document.getElementById('reload-move-rename-script-page-btn').style.display = 'inline-block';
-        });
-
-        document.getElementById('reload-move-rename-script-page-btn').addEventListener('click', () => {
-            location.reload();
-        });
-
-        document.getElementById('selections-script-modal').querySelector('.close').addEventListener('click', () => {
-            document.getElementById('selections-script-modal').style.display = 'none';
-        });
-
-        document.getElementById('copy-selections-script-btn').addEventListener('click', () => {
-            const scriptTextArea = document.getElementById('selections-batch-script');
-            scriptTextArea.select();
-            navigator.clipboard.writeText(scriptTextArea.value).then(() => {
-                alert('Script copied to clipboard!');
-                document.getElementById('reload-selections-script-page-btn').style.display = 'inline-block';
-            });
-        });
-
-        document.getElementById('download-selections-script-link').addEventListener('click', () => {
-            document.getElementById('reload-selections-script-page-btn').style.display = 'inline-block';
-        });
-
-        document.getElementById('reload-selections-script-page-btn').addEventListener('click', () => {
-            location.reload();
-        });
-
-        function generateSelectionsTxtScript() {
-            const script = [
-                '@echo off',
-                'setlocal enabledelayedexpansion',
-                '',
-                'REM Output file',
-                'set OUT=selections.txt',
-                '> "%OUT%" echo.',
-                '',
-                'for %%F in ("sc" "Landscape" "Landscape Rotate" "Edit") do (',
-                '    echo # %%~F>> "%OUT%"',
-                '    if exist "%%~F" (',
-                '        for /f "delims=" %%A in (\'dir /b /a:-d "%%~F"\') do (',
-                '            echo %%A>> "%OUT%"',
-                '        )',
-                '    )',
-                '    echo.>> "%OUT%"',
-                ')',
-                '',
-                'echo Done. Output saved to selections.txt'
-            ].join('\r\n');
-            document.getElementById('selections-batch-script').value = script;
-            const blob = new Blob([script], { type: 'text/plain;charset=utf-8' });
-            document.getElementById('download-selections-script-link').href = URL.createObjectURL(blob);
-        }
-
-        function generateRenameScript() {
-            const renamedCanvas = Array.from(canvases.values()).find(c => c.name === 'Renamed');
-            if (!renamedCanvas) {
-                alert('Could not find the "Renamed" canvas.');
-                return;
-            }
-
-            const escapeString = (str) => `'${str.replace(/'/g, "''")}'`;
-
-            const renameCommands = [];
-            const metadataCommands = [];
-            const undoActions = [];
-            const filesWithNoTitle = [];
-
-            const thumbnailsInRenamed = renamedCanvas.thumbnails;
-            thumbnailsInRenamed.forEach(thumb => {
-                const originalThumbName = thumb.querySelector('.thumbnail-name').dataset.originalFilename;
-                const newThumbName = thumb.dataset.fileName;
-                const videoFile = allVideoFiles.find(f => f.name.replace(/\.[^/.]+$/, ".jpg") === originalThumbName);
-
-                if (videoFile) {
-                    const originalVideoName = videoFile.name;
-                    const newVideoExtension = originalVideoName.substring(originalVideoName.lastIndexOf('.'));
-                    const newVideoName = newThumbName.replace(/\.[^/.]+$/, newVideoExtension);
-
-                    // --- Prepare UNDO command ---
-                    undoActions.push(`if (Test-Path -LiteralPath ${escapeString(newVideoName)}) { Rename-Item -LiteralPath ${escapeString(newVideoName)} -NewName ${escapeString(originalVideoName)} -ErrorAction SilentlyContinue }`);
-
-                    // --- Prepare RENAME commands ---
-                    if (videoFile.customPath) {
-                        const originalFullPath = `${videoFile.customPath}\\${originalVideoName}`;
-                        renameCommands.push(`if (Test-Path -LiteralPath ${escapeString(originalFullPath)}) { Move-Item -LiteralPath ${escapeString(originalFullPath)} -Destination "." }`);
-                    }
-                    renameCommands.push(`if (Test-Path -LiteralPath ${escapeString(originalVideoName)}) { Rename-Item -LiteralPath ${escapeString(originalVideoName)} -NewName ${escapeString(newVideoName)} }`);
-
-                    // --- Prepare METADATA commands with ffmpeg ---
-                    const titleRegex = / - (\d+)\./;
-                    const match = originalVideoName.match(titleRegex);
-                    if (match && match[1]) {
-                        const title = match[1];
-                        const newVideoNameEscaped = escapeString(newVideoName);
-                        const tempVideoName = `temp-${newVideoName}`;
-                        const tempVideoNameEscaped = escapeString(tempVideoName);
-
-                        const ffmpegBlock = [
-                            `Write-Host "Setting metadata for ${newVideoNameEscaped}..."`,
-                            `if (Test-Path -LiteralPath ${newVideoNameEscaped}) {`,
-                            `    ffmpeg -i ${newVideoNameEscaped} -c copy -metadata title="${title}" ${tempVideoNameEscaped} -y -hide_banner -loglevel error`,
-                            `    if ($LASTEXITCODE -eq 0) {`,
-                            `        Remove-Item -LiteralPath ${newVideoNameEscaped}`,
-                            `        Rename-Item -LiteralPath ${tempVideoNameEscaped} -NewName ${newVideoNameEscaped}`,
-                            `    } else {`,
-                            `        Write-Warning "ffmpeg failed for ${newVideoNameEscaped}. The original file has been kept."`,
-                            `        if (Test-Path -LiteralPath ${tempVideoNameEscaped}) { Remove-Item -LiteralPath ${tempVideoNameEscaped} }`,
-                            `    }`,
-                            `}`
-                        ];
-                        metadataCommands.push(ffmpegBlock.join('\r\n'));
-                    } else {
-                        filesWithNoTitle.push({ original: originalVideoName, new: newVideoName });
-                    }
-                }
-            });
-
-            const summarySection = `
-                Write-Host "Renaming process complete." -ForegroundColor Green
-                ${filesWithNoTitle.length > 0 ? `
-                Write-Host ""
-                Write-Host "Could not find a title ID for the following files:" -ForegroundColor Yellow
-                ${filesWithNoTitle.map(f => `Write-Host " - Original: ${f.original}"\r\nWrite-Host "   - Renamed: ${f.new}"`).join('\r\n')}
-                ` : ''}
-            `;
-
-            const script = `
-function Show-Menu {
-    param (
-        [string]$Title = 'Rename Script'
-    )
-    Clear-Host
-    Write-Host "================ $Title ================"
-    Write-Host
-    Write-Host "1. Press '1' to Rename Files"
-    Write-Host "2. Press '2' to Undo Renaming"
-    Write-Host "Q. Press 'Q' to quit"
-    Write-Host
-}
-
-$RenameScriptBlock = {
-    Write-Host "--- Starting Rename Files (Phase 1: Renaming) ---"
-    ${renameCommands.join('\r\n')}
-    Write-Host "--- Renaming complete. ---"
-
-    Write-Host "--- Starting Rename Files (Phase 2: Updating Metadata via ffmpeg) ---"
-
-    ${metadataCommands.join('\r\n\r\n')}
-
-    ${summarySection}
-    Read-Host -Prompt "Press Enter to return to the menu"
-}
-
-$UndoScriptBlock = {
-    Write-Host "--- Starting Undo Renaming ---"
-    ${undoActions.join('\r\n')}
-    Write-Host "Undo process complete."
-    Read-Host -Prompt "Press Enter to return to the menu"
-}
-
-do {
-    Show-Menu
-    $selection = Read-Host -Prompt "Please make a selection"
-    switch ($selection) {
-        '1' { Invoke-Command -ScriptBlock $RenameScriptBlock }
-        '2' { Invoke-Command -ScriptBlock $UndoScriptBlock }
-        'q' { return }
-    }
-} until ($selection -eq 'q')
-            `.trim();
-
-            document.getElementById('move-rename-batch-script').value = script;
-            const blob = new Blob([script], { type: 'text/plain;charset=utf-8' });
-            const downloadLink = document.getElementById('download-move-rename-script-link');
-            downloadLink.href = URL.createObjectURL(blob);
-            downloadLink.download = 'rename_script.ps1';
-        }
-
-
-        function generateCombinedThumbnailScript(missingRegular, missingEdit) {
-            const scriptLines = ['@echo off', 'setlocal enabledelayedexpansion', 'cd /d "%~dp0"'];
-
-            if (missingRegular.length > 0) {
-                scriptLines.push(
-                    'echo Creating Thumbnails directory...',
-                    'if not exist "Thumbnails" mkdir Thumbnails',
-                    'echo Generating regular thumbnails...'
-                );
-                missingRegular.forEach(file => {
-                    const fileName = file.name;
-                    const thumbnailName = fileName.substring(0, fileName.lastIndexOf('.')) + '.jpg';
-                    scriptLines.push(`ffmpeg -y -i "${fileName}" -ss 00:00:02.000 -frames:v 1 -vf "scale=256:256:force_original_aspect_ratio=decrease" "Thumbnails\\${thumbnailName}"`);
-                });
-                scriptLines.push('echo Regular thumbnail generation complete.', '');
-            }
-
-            if (missingEdit.length > 0) {
-                scriptLines.push(
-                    'echo Creating Edit Thumbnails directory...',
-                    'if not exist "Edit Thumbnails" mkdir "Edit Thumbnails"',
-                    'echo Generating edit thumbnails...'
-                );
-                missingEdit.forEach(file => {
-                    const fileName = file.name;
-                    const baseName = fileName.substring(0, fileName.lastIndexOf('.'));
-                    scriptLines.push(
-                        `echo Processing "${fileName}"...`,
-                        `for /f "delims=" %%a in ('ffprobe -v error -show_entries format^=duration -of default^=noprint_wrappers^=1:nokey^=1 "${fileName}"') do (`,
-                        '    set "duration_str=%%a"',
-                        ')',
-                        'for /f "delims=." %%a in ("!duration_str!") do set "duration_int=%%a"',
-                        'if !duration_int! equ 0 set "duration_int=10"',
-                        'set /a "interval = !duration_int! / 10"',
-                        'if !interval! equ 0 set "interval=1"',
-                        'for /l %%i in (1, 1, 10) do (',
-                        '    set /a "timestamp = (%%i - 1) * !interval!"',
-                        `    ffmpeg -ss !timestamp! -i "${fileName}" -vframes 1 -vf "scale=256:256:force_original_aspect_ratio=decrease" -y "Edit Thumbnails\\${baseName}_%%i.jpg" >nul 2>&1`,
-                        ')'
-                    );
-                });
-                scriptLines.push('echo Edit thumbnail generation complete.', '');
-            }
-
-            scriptLines.push('echo All thumbnail generation tasks are complete.', 'pause');
-            const script = scriptLines.join('\r\n');
-            batchScriptTextArea.value = script;
-            const blob = new Blob([script], { type: 'text/plain;charset=utf-8' });
-            downloadScriptLink.href = URL.createObjectURL(blob);
-        }
-
-        function generateBatchScript(videoFiles, dirName) {
-            const scriptLines = [
-                '@echo off',
-                `cd /d "%~dp0"`,
-                'echo Creating Thumbnails directory...',
-                'if not exist "Thumbnails" mkdir Thumbnails',
-                'echo Generating thumbnails...',
-                ...videoFiles.map(file => {
-                    const fileName = file.name;
-                    const thumbnailName = fileName.substring(0, fileName.lastIndexOf('.')) + '.jpg';
-                    return `ffmpeg -y -i "${fileName}" -ss 00:00:02.000 -frames:v 1 -vf "scale=256:256:force_original_aspect_ratio=decrease" "Thumbnails\\${thumbnailName}"`;
-                }),
-                'echo.',
-                'echo Thumbnail generation complete.',
-                'pause'
-            ];
-            const script = scriptLines.join('\r\n');
-            batchScriptTextArea.value = script;
-
-            const blob = new Blob([script], { type: 'text/plain;charset=utf-8' });
-            downloadScriptLink.href = URL.createObjectURL(blob);
-        }
-
-        function copyScriptToClipboard() {
-            batchScriptTextArea.select();
-            navigator.clipboard.writeText(batchScriptTextArea.value).then(() => {
-                alert('Script copied to clipboard! Paste it into a file named "generate_thumbnails.bat" in your video folder and run it.');
-                reloadPageBtn.style.display = 'inline-block';
-            }).catch(err => {
-                console.error('Failed to copy text: ', err);
-            });
-        }
-
-        function downloadBatchFile() {
-            alert('Once downloaded, move the ".bat" file into your video folder and double-click it to run.');
-            reloadPageBtn.style.display = 'inline-block';
-        }
-
-        function generateOrphanDeletionScript(orphanedFiles) {
-            const scriptLines = [
-                '# PowerShell Script to delete orphaned thumbnails',
-                'Write-Host "Deleting orphaned thumbnail files (moving to Recycle Bin)..."',
-                ...orphanedFiles.map(file => `Remove-Item -LiteralPath "Thumbnails\\${file.name}"`),
-                'Write-Host "Deletion complete."',
-                'Read-Host -Prompt "Press Enter to exit"'
-            ];
-            const script = scriptLines.join('\r\n');
-
-            // Re-use the main script modal
-            scriptModal.querySelector('h2').textContent = 'Delete Orphaned Thumbnails';
-            scriptModal.querySelector('p').textContent = 'This PowerShell script will move the orphaned thumbnails to the Recycle Bin.';
-            batchScriptTextArea.value = script;
-            downloadScriptLink.download = 'delete_orphans.ps1';
-
-            const blob = new Blob([script], { type: 'text/plain;charset=utf-8' });
-            downloadScriptLink.href = URL.createObjectURL(blob);
-            scriptModal.style.display = 'block';
-        }
-
-
-        function promptOrphanedThumbnails(orphanedFiles) {
-            return new Promise(resolve => {
-                const modal = document.getElementById('orphaned-thumbnails-modal');
-                document.getElementById('orphaned-thumbnails-message').textContent = `Found ${orphanedFiles.length} thumbnail(s) without a matching video file. What would you like to do?`;
-
-                const fileListDiv = document.getElementById('orphaned-files-list');
-                fileListDiv.innerHTML = orphanedFiles.map(f => `<div>${f.name}</div>`).join('');
-
-                const deleteBtn = document.getElementById('delete-orphans-script-btn');
-                const hideBtn = document.getElementById('hide-orphans-btn');
-                const hideForeverBtn = document.getElementById('hide-forever-orphans-btn');
-                const doNothingBtn = document.getElementById('do-nothing-orphans-btn');
-                const closeBtn = modal.querySelector('.close');
-
-                const cleanup = () => {
-                    // Replace buttons to remove event listeners
-                    deleteBtn.replaceWith(deleteBtn.cloneNode(true));
-                    hideBtn.replaceWith(hideBtn.cloneNode(true));
-                    hideForeverBtn.replaceWith(hideForeverBtn.cloneNode(true));
-                    doNothingBtn.replaceWith(doNothingBtn.cloneNode(true));
-                    closeBtn.replaceWith(closeBtn.cloneNode(true));
-                    modal.style.display = 'none';
-                };
-
-                deleteBtn.addEventListener('click', () => { cleanup(); resolve('delete'); }, { once: true });
-                hideBtn.addEventListener('click', () => { cleanup(); resolve('hide'); }, { once: true });
-                hideForeverBtn.addEventListener('click', () => { cleanup(); resolve('hideForever'); }, { once: true });
-
-                const doNothingHandler = () => {
-                    cleanup();
-                    resolve('nothing');
-                };
-                doNothingBtn.addEventListener('click', doNothingHandler, { once: true });
-                closeBtn.addEventListener('click', doNothingHandler, { once: true });
-
-                modal.style.display = 'block';
-            });
-        }
-
-        reloadPageBtn.addEventListener('click', () => {
-            location.reload();
-        });
-
-        function initializeFilenameBuilder() {
-            filenamePartsContainer.innerHTML = '';
-            // Start with a category and one element
-            filenameParts = [{ type: 'category', value: '' }, { type: 'element', value: '' }];
-            renderFilenameParts();
-            updateFilenamePreview();
-            populatePreviousElements();
-            populatePreviousCategories();
-        }
-
-        function renderFilenameParts() {
-            filenamePartsContainer.innerHTML = '';
-            filenameParts.forEach((part, index) => {
-                const row = document.createElement('div');
-                row.className = 'filename-part-row';
-
-                const input = document.createElement('input');
-                input.type = 'text';
-                input.value = part.value;
-
-                if (part.type === 'category') {
-                    input.placeholder = 'Category';
-                    input.setAttribute('list', 'previous-categories-list');
-                } else {
-                    input.placeholder = `Element ${index}`;
-                    input.setAttribute('list', 'previous-elements-list');
-                }
-
-                input.addEventListener('input', () => {
-                    part.value = input.value;
-                    updateFilenamePreview();
-                });
-
-                row.appendChild(input);
-
-                if (index > 0) { // Can't remove the 'Category'
-                    const removeBtn = document.createElement('button');
-                    removeBtn.textContent = '-';
-                    removeBtn.onclick = () => removeFilenamePart(index);
-                    row.appendChild(removeBtn);
-                }
-                filenamePartsContainer.appendChild(row);
-            });
-        }
-
-        function updateFilenamePreview() {
-            const username = projectUsernameInput.value || 'username';
-            const category = filenameParts[0]?.value.trim() || 'Category';
-
-            const elements = filenameParts.slice(1)
-                .map(p => p.value.trim())
-                .filter(p => p);
-
-            // Build a representative filename string for the preview
-            const elementsString = elements.map(e => `(${e})`).join(' ');
-            filenamePreview.textContent = `[${username}]_${category} ${elementsString} (1).mp4`;
-
-            // Also show the final button text and structure
-            if (elements.length > 0) {
-                const buttonName = elements[elements.length - 1];
-                let structure = category;
-                if (elements.length > 1) {
-                    structure += ` -> ${elements.slice(0, -1).join(' -> ')}`;
-                }
-                filenamePreview.textContent += `\nButton: "${buttonName}" under "${structure}"`;
-            }
-        }
-
-        function addFilenamePart(value = '') {
-            filenameParts.push({ type: 'element', value });
-            renderFilenameParts();
-            updateFilenamePreview();
-        }
-
-        function removeFilenamePart(index) {
-            if (filenameParts.length > 2) { // Always keep at least one category and one element
-                filenameParts.splice(index, 1);
-                renderFilenameParts();
-                updateFilenamePreview();
-            }
-        }
-
-        function getPreviousElements() {
-            const projectData = loadProjectData(directoryName);
-            return projectData.previousFilenameElements || [];
-        }
-
-        function populatePreviousElements() {
-            const values = getPreviousElements();
-            const datalist = document.getElementById('previous-elements-list');
-            datalist.innerHTML = '';
-            values.forEach(val => {
-                const option = document.createElement('option');
-                option.value = val;
-                datalist.appendChild(option);
-            });
-        }
-
-        function getPreviousCategories() {
-            const projectData = loadProjectData(directoryName);
-            return projectData.previousFilenameCategories || [];
-        }
-
-        function populatePreviousCategories() {
-            const categories = getPreviousCategories();
-            const datalist = document.getElementById('previous-categories-list');
-            datalist.innerHTML = '';
-            categories.forEach(val => {
-                const option = document.createElement('option');
-                option.value = val;
-                datalist.appendChild(option);
-            });
-        }
-
-        document.getElementById('add-element-btn').addEventListener('click', () => addFilenamePart());
-
-        document.getElementById('delete-preset-btn').addEventListener('click', () => {
-            const presetSelector = document.getElementById('preset-selector');
-            const presetName = presetSelector.value;
-            if (!presetName) {
-                alert("Please select a preset to delete.");
-                return;
-            }
-
-            if (confirm(`Are you sure you want to delete the preset "${presetName}"?`)) {
-                let presets = JSON.parse(localStorage.getItem('buttonPresets') || '[]');
-                presets = presets.filter(p => p.name !== presetName);
-                localStorage.setItem('buttonPresets', JSON.stringify(presets));
-
-                // Reset the form and dropdown
-                populatePresetSelector();
-                initializeFilenameBuilder();
-                document.getElementById('delete-preset-btn').disabled = true;
-            }
-        });
-
-        document.getElementById('preset-selector').addEventListener('change', (e) => {
-            const presetName = e.target.value;
-            const deleteBtn = document.getElementById('delete-preset-btn');
-            deleteBtn.disabled = !presetName;
-
-            if (!presetName) return;
-
-            const presets = JSON.parse(localStorage.getItem('buttonPresets') || '[]');
-            const preset = presets.find(p => p.name === presetName);
-
-            if (preset && preset.path) {
-                const [category, ...elements] = preset.path;
-                filenameParts = [
-                    { type: 'category', value: category || '' },
-                    ...elements.map(el => ({ type: 'element', value: el }))
-                ];
-
-                // If there are no elements after loading, add one empty element field
-                if (filenameParts.length === 1) {
-                    filenameParts.push({ type: 'element', value: '' });
-                }
-
-                renderFilenameParts();
-                updateFilenamePreview();
-            }
-        });
-
-        function openButtonEditor(buttonId, isEditMode) {
-            const projectData = loadProjectData(directoryName);
-            const { button, path } = findButtonPathById(projectData.customButtonTree, buttonId);
-
-            if (!button || !path) {
-                console.error("Button not found for editing:", buttonId);
-                return;
-            }
-
-            const elements = path.slice(1);
-
-            filenameParts = [
-                { type: 'category', value: path[0] || '' },
-                ...elements.map(el => ({ type: 'element', value: el }))
-            ];
-
-            originalPartsForCopyCheck = JSON.stringify(filenameParts);
-
-            renderFilenameParts();
-            updateFilenamePreview();
-
-            if (isEditMode) {
-                document.getElementById('editing-button-id').value = buttonId;
-                createFilenameButtonBtn.textContent = 'Update Button';
-            } else {
-                document.getElementById('editing-button-id').value = '';
-                createFilenameButtonBtn.textContent = 'Add Button';
-            }
-
-            document.getElementById('clone-filename-button-btn').style.display = 'none';
-            populatePresetSelector();
-            filenameBuilderModal.style.display = 'block';
-        }
-
-        function findButtonPathById(tree, id, currentPath = []) {
-            for (const node of tree) {
-                 if (node.type === 'button' && String(node.id) === String(id)) {
-                    return { button: node, path: [...currentPath, node.name] };
-                }
-                if (node.type === 'category' && node.children) {
-                    const result = findButtonPathById(node.children, id, [...currentPath, node.name]);
-                    if (result.button) return result;
-                }
-            }
-            return {};
-        }
-
-        function removeButtonFromTreeById(tree, id) {
-             if (!Array.isArray(tree)) return [];
-
-            let filteredNodes = tree.filter(node =>
-                !(node.type === 'button' && String(node.id) === String(id))
-            );
-
-            return filteredNodes.map(node => {
-                if (node.type === 'category' && node.children) {
-                    node.children = removeButtonFromTreeById(node.children, id);
-                }
-                return node;
-            }).filter(node => !(node.type === 'category' && (!node.children || node.children.length === 0)));
-        }
-
-        function createOrUpdateButton() {
-            const editingButtonId = document.getElementById('editing-button-id').value;
-            const isUpdate = !!editingButtonId;
-
-            const category = filenameParts[0]?.value.trim();
-            if (!category) {
-                alert('A "Category" is required.');
-                return;
-            }
-
-            let elements = filenameParts.slice(1).map(p => p.value.trim()).filter(p => p);
-            if (elements.length === 0) {
-                alert('At least one "Element" is required.');
-                return;
-            }
-
-            // Logic to append "(Copy)" if no changes were made
-            const currentPartsString = JSON.stringify(filenameParts);
-            if (!isUpdate && currentPartsString === originalPartsForCopyCheck) {
-                const lastElementIndex = filenameParts.length - 1;
-                if (lastElementIndex > 0) { // Ensure there is an element to modify
-                    filenameParts[lastElementIndex].value += ' (Copy)';
-                    // Re-extract elements after modification
-                    elements = filenameParts.slice(1).map(p => p.value.trim()).filter(p => p);
-                }
-            }
-
-            const projectData = loadProjectData(directoryName);
-
-            // Save new elements to suggestions
-            elements.forEach(el => {
-                if (el && !projectData.previousFilenameElements?.includes(el)) {
-                    (projectData.previousFilenameElements = projectData.previousFilenameElements || []).push(el);
-                }
-            });
-            if (category && !projectData.previousFilenameCategories?.includes(category)) {
-                 (projectData.previousFilenameCategories = projectData.previousFilenameCategories || []).push(category);
-            }
-
-            let customButtonTree = projectData.customButtonTree;
-
-            if (isUpdate) {
-                customButtonTree = removeButtonFromTreeById(customButtonTree, editingButtonId);
-            }
-
-            let path = [category, ...elements];
-            let buttonData = {
-                fullButtonText: elements.map(p => `(${p})`).join(' '),
-                id: isUpdate ? editingButtonId : Date.now() + Math.random()
-            };
-
-            if (!insertButtonIntoTree(customButtonTree, path, buttonData)) {
-                alert('A button with this exact name and category structure already exists.');
-                if (isUpdate) {
-                     loadCustomButtons(projectData.customButtonTree, projectData.collapseState, projectData.buttonVisibility);
-                }
-                return;
-            }
-
-            projectData.customButtonTree = customButtonTree;
-            saveProjectData(directoryName, projectData);
-            loadCustomButtons(projectData.customButtonTree, projectData.collapseState, projectData.buttonVisibility);
-            filenameBuilderModal.style.display = 'none';
-            populatePreviousElements();
-            populatePreviousCategories();
-            originalPartsForCopyCheck = null; // Reset tracker
-        }
-
-        createFilenameButtonBtn.addEventListener('click', () => createOrUpdateButton());
-
-
-        async function loadCustomButtons(customButtonTree, collapseState, buttonVisibility) {
-            if (!directoryName) {
-                return;
-            }
-            const scrollContainer = document.getElementById('sidebar-scroll-container');
-            scrollContainer.innerHTML = '';
-            const numElements = parseInt(document.getElementById('num-elements-input').value, 10);
-
-            const createCollapseClickHandler = (key) => (event) => {
-                event.stopPropagation();
-                const projectData = loadProjectData(directoryName);
-                projectData.collapseState[key] = !projectData.collapseState[key];
-                saveProjectData(directoryName, projectData);
-                loadCustomButtons(projectData.customButtonTree, projectData.collapseState, projectData.buttonVisibility);
-            };
-
-            function renderTree(nodes, parentContainer, level, parentPath) {
-                if (!Array.isArray(nodes)) return;
-
-                nodes.sort((a, b) => {
-                    if (a.name === '+1') return -1;
-                    if (b.name === '+1') return 1;
-                    return a.name.localeCompare(b.name);
-                });
-
-                nodes.forEach(node => {
-                    const currentPath = [...parentPath, node.name];
-                    const nodeKey = `node_${currentPath.join('_')}`;
-
-                    if (node.type === 'category' && level < numElements) {
-                        const isCollapsed = collapseState[nodeKey] || false;
-                        const header = document.createElement(`h${4 + level}`);
-                        header.textContent = currentPath.join('-');
-                        header.style.marginLeft = `${level * 8}px`;
-                        header.style.cursor = 'pointer';
-                        header.onclick = createCollapseClickHandler(nodeKey);
-                        parentContainer.appendChild(header);
-
-                        if (!isCollapsed && Array.isArray(node.children)) {
-                            renderTree(node.children, parentContainer, level + 1, currentPath);
-                        }
-                    } else {
-                        function createButtonsFromSubtree(startingNode, basePath, textParts) {
-                            if (startingNode.type === 'button') {
-                                if (buttonVisibility[startingNode.id] === false) return;
-
-                                const combinedName = [...textParts, startingNode.name].join(' ');
-                                const finalButtonName = startingNode.specialType === 'plusOne' ? '+1' : combinedName;
-
-                                parentContainer.appendChild(createSidebarButton({ ...startingNode, name: finalButtonName }, basePath));
-
-                            } else if (startingNode.type === 'category' && Array.isArray(startingNode.children)) {
-                                const newTextParts = [...textParts, startingNode.name];
-                                const sortedChildren = [...startingNode.children].sort((a, b) => {
-                                    if (a.name === '+1') return -1;
-                                    if (b.name === '+1') return 1;
-                                    return a.name.localeCompare(b.name);
-                                });
-                                sortedChildren.forEach(child => {
-                                    createButtonsFromSubtree(child, basePath, newTextParts);
-                                });
-                            }
-                        }
-                        // By passing an empty array `[]` as the initial textParts, we prevent the
-                        // duplication bug where the starting node's name was added twice. The
-                        // recursive function is responsible for building the entire name string.
-                        createButtonsFromSubtree(node, currentPath.slice(0, numElements), []);
-                    }
-                });
-            }
-
-            renderTree(customButtonTree, scrollContainer, 0, []);
-        }
-
-    function populateVisibleButtonsModal() {
-        visibleButtonsListContainer.innerHTML = '';
-        const projectData = loadProjectData(directoryName);
-        let customButtonTree = projectData.customButtonTree;
-        const buttonVisibility = projectData.buttonVisibility;
-        const numElements = parseInt(document.getElementById('num-elements-input').value, 10);
-
-        // We'll use a modified render function to build the checklist
-        function renderVisibilityChecklist(nodes, parentContainer, level, parentPath = []) {
-            if (!Array.isArray(nodes)) return;
-
-            // Use the same sorting as the main render function
-            nodes.sort((a, b) => {
-                if (a.name === '+1') return -1;
-                if (b.name === '+1') return 1;
-                if (a.type === 'category' && b.type !== 'category') return -1;
-                if (a.type !== 'category' && b.type === 'category') return 1;
-                return a.name.localeCompare(b.name);
-            });
-
-            nodes.forEach(node => {
-                const currentPath = [...parentPath, node.name];
-                if (node.type === 'category' && level <= numElements) {
-                    const header = document.createElement(`h${4 + level}`);
-                    header.textContent = currentPath.join('-');
-                    header.style.marginLeft = `${level * 8}px`;
-                    header.style.color = 'black';
-                    parentContainer.appendChild(header);
-
-                    const childrenContainer = document.createElement('div');
-                    renderVisibilityChecklist(node.children, childrenContainer, level + 1);
-                    parentContainer.appendChild(childrenContainer);
-
-                } else {
-                     function createCheckboxesFromSubtree(startingNode, textParts) {
-                        if (startingNode.type === 'button') {
-                            const allTextParts = [...textParts, startingNode.name];
-                            const buttonName = startingNode.specialType === 'plusOne'
-                                ? '+1'
-                                : allTextParts.filter(p => p !== '+1').join(' ');
-
-                            const div = document.createElement('div');
-                            div.style.marginLeft = `${(numElements + 1) * 8}px`;
-                            div.style.display = 'flex';
-                            div.style.alignItems = 'center';
-
-                            const checkbox = document.createElement('input');
-                            checkbox.type = 'checkbox';
-                            checkbox.id = `vis-check-${startingNode.id}`;
-                            checkbox.checked = buttonVisibility[startingNode.id] !== false; // Default to visible
-
-                            checkbox.onchange = () => {
-                                const buttonId = String(startingNode.id);
-                                projectData.buttonVisibility[buttonId] = checkbox.checked;
-
-                                if (!checkbox.checked) {
-                                    // If the button is being hidden, deselect it from the removal list
-                                    if (buttonsForRemoval.has(buttonId)) {
-                                        buttonsForRemoval.delete(buttonId);
-                                    }
-
-                                    // Also, deselect it from the "rename" state
-                                    const renameBtn = document.getElementById('rename-btn');
-                                    const lastClickedData = JSON.parse(renameBtn.dataset.lastClicked || 'null');
-                                    if (lastClickedData && String(lastClickedData.id) === buttonId) {
-                                        delete renameBtn.dataset.lastClicked;
-                                        updatePreviewPanel(null); // Clear the preview panel as well
-                                    }
-
-                                    updateSidebarActionButtonsState();
-                                    updateBottomBarInfo();
-                                }
-
-                                saveProjectData(directoryName, projectData);
-                                // The loadCustomButtons function will redraw the sidebar, effectively
-                                // removing the .selected-for-removal class from the now-hidden button.
-                                loadCustomButtons(projectData.customButtonTree, projectData.collapseState, projectData.buttonVisibility);
-                            };
-
-                            const label = document.createElement('label');
-                            label.htmlFor = checkbox.id;
-                            label.textContent = buttonName;
-                            label.style.color = 'black';
-                            label.style.marginLeft = '4px';
-
-                            div.appendChild(checkbox);
-                            div.appendChild(label);
-                            parentContainer.appendChild(div);
-
-                        } else if (startingNode.type === 'category') {
-                            const newTextParts = [...textParts, startingNode.name];
-                            if(Array.isArray(startingNode.children)) {
-                                startingNode.children.forEach(child => createCheckboxesFromSubtree(child, newTextParts));
-                            }
+            const projectFolders = [];
+
+            async function findProjectFolders(dirHandle, currentPath = '') {
+                 for await (const entry of dirHandle.values()) {
+                    if (entry.kind === 'directory') {
+                        const newPath = currentPath ? `${currentPath}\\${entry.name}` : entry.name;
+                        try {
+                            await entry.getDirectoryHandle('Edit Thumbnails');
+                            projectFolders.push({ handle: entry, path: newPath, name: entry.name });
+                        } catch (e) {
+                           await findProjectFolders(entry, newPath);
                         }
                     }
-                    createCheckboxesFromSubtree(node, []);
-                }
-            });
-        }
-
-        renderVisibilityChecklist(customButtonTree, visibleButtonsListContainer, 0, []);
-    }
-
-    visibleButtonsBtn.addEventListener('click', () => {
-        populateVisibleButtonsModal();
-        visibleButtonsModal.style.display = 'block';
-    });
-
-    visibleButtonsModal.querySelector('.close').addEventListener('click', () => {
-        visibleButtonsModal.style.display = 'none';
-    });
-
-        function updateBottomBarInfo() {
-            const infoDiv = document.getElementById('bottom-bar-info');
-
-            // Priority 1: Display info about sidebar buttons selected for removal.
-            if (buttonsForRemoval.size === 1) {
-                const buttonId = buttonsForRemoval.values().next().value;
-                const projectData = loadProjectData(directoryName);
-                let customButtonTree = projectData.customButtonTree;
-
-                function findButtonPath(nodes, id, currentPath = []) {
-                    for (const node of nodes) {
-                        if (node.type === 'button' && String(node.id) === String(id)) {
-                            return { button: node, path: currentPath };
-                        }
-                        if (node.type === 'category' && node.children) {
-                            const result = findButtonPath(node.children, id, [...currentPath, node.name]);
-                            if (result) return result;
-                        }
-                    }
-                    return null;
-                }
-
-                const result = findButtonPath(customButtonTree, buttonId);
-                if (result && result.path.length > 0) {
-                    const username = projectUsernameInput.value.trim() || 'username';
-                    const category = result.path[0];
-                    const fullButtonText = result.button.fullButtonText;
-                    const constructedName = `[${username}]_${category} ${fullButtonText}`;
-                    infoDiv.textContent = constructedName.replace(/\s*\(\d+\)$/, '').trim();
-                } else {
-                    infoDiv.textContent = '1 sidebar button selected';
-                }
-                 return; // Exit after showing button info
-
-            } else if (buttonsForRemoval.size > 1) {
-                infoDiv.textContent = `${buttonsForRemoval.size} sidebar buttons selected`;
-                return; // Exit after showing button info
-            }
-
-            // Priority 2: Display info about selected thumbnails.
-            if (selectedThumbnails.size === 1) {
-                const singleThumbnail = selectedThumbnails.values().next().value;
-                infoDiv.textContent = singleThumbnail.dataset.fileName;
-            } else if (selectedThumbnails.size > 1) {
-                infoDiv.textContent = `${selectedThumbnails.size} items selected`;
-            } else {
-                infoDiv.textContent = '';
-            }
-        }
-
-        function createSidebarButton(buttonData, path) {
-            const { id, name, fullButtonText, specialType } = buttonData;
-
-            const container = document.createElement('div');
-            container.className = 'sidebar-button-container';
-            container.style.position = 'relative';
-
-            const button = document.createElement('button');
-            button.textContent = name.replace(/[()]/g, '');
-            button.dataset.id = id;
-            const numElements = parseInt(document.getElementById('num-elements-input').value, 10);
-            button.style.paddingLeft = `${(numElements) * 8}px`;
-
-            if (buttonsForRemoval.has(String(id))) {
-                button.classList.add('selected-for-removal');
-            }
-
-            button.onclick = () => {
-                const buttonId = button.dataset.id;
-                const isCurrentlySelected = button.classList.contains('selected-for-removal');
-                const renameBtn = document.getElementById('rename-btn');
-                const buttonInfo = { id, name, fullButtonText, specialType, path };
-
-                if (isCurrentlySelected) {
-                    buttonsForRemoval.delete(buttonId);
-                    button.classList.remove('selected-for-removal');
-                    delete renameBtn.dataset.lastClicked;
-                    updatePreviewPanel(null); // Clear the preview
-                } else {
-                    // When switching to a new button, deselect any thumbnails that were manually selected.
-                    if (selectedThumbnails.size > 0) {
-                        selectedThumbnails.forEach(thumb => thumb.classList.remove('selected'));
-                        selectedThumbnails.clear();
-                    }
-
-                    document.querySelectorAll('#sidebar-scroll-container button.selected-for-removal').forEach(b => {
-                        b.classList.remove('selected-for-removal');
-                        buttonsForRemoval.delete(b.dataset.id);
-                    });
-                    buttonsForRemoval.add(buttonId);
-                    button.classList.add('selected-for-removal');
-
-                    renameBtn.dataset.lastClicked = JSON.stringify(buttonInfo);
-                    updatePreviewPanel(buttonInfo);
-                }
-
-                updateSidebarActionButtonsState();
-                updateBottomBarInfo();
-                highlightMatchingThumbnails(path, fullButtonText, !isCurrentlySelected, specialType === 'plusOne');
-            };
-
-
-            const fontSize = document.getElementById('font-size-slider').value;
-             button.style.cssText += `
-                width: 100%; margin: 0; padding-top: 0; padding-bottom: 0; height: 36px;
-                background-color: #1877f2; color: #ffffff; border: 1px solid #444444;
-                border-top: none; border-radius: 0; font-size: ${fontSize}px; cursor: pointer;
-                box-sizing: border-box; text-align: left; display: block;
-            `;
-            button.style.textAlign = 'left';
-
-            adjustButtonFontSize(button);
-            container.appendChild(button);
-            return container;
-        }
-
-        function highlightMatchingThumbnails(path, fullButtonText, shouldSelect, isCategoryOnly) {
-            const username = projectUsernameInput.value.trim();
-            if (!username) return;
-
-            const category = path[0];
-            const prefix = `[${username}]_${category}`;
-
-            const currentCanvas = canvases.get(activeCanvasId);
-            if (currentCanvas) {
-                currentCanvas.thumbnails.forEach(thumb => {
-                    const baseFilename = thumb.dataset.fileName.substring(0, thumb.dataset.fileName.lastIndexOf('.'));
-                    const filenameWithoutNumber = baseFilename.replace(/\s*\(\d+\)$/, '').trim();
-
-                    let matches = false;
-                    if (isCategoryOnly) {
-                        // For +1, we want an exact match with the prefix, and nothing after it.
-                        matches = filenameWithoutNumber === prefix;
-                    } else {
-                        // For regular buttons, it must start with the prefix and contain the elements.
-                        const expectedFilenamePart = `${prefix} ${fullButtonText}`;
-                        matches = filenameWithoutNumber.startsWith(expectedFilenamePart);
-                    }
-
-                    if (matches) {
-                        if (shouldSelect) {
-                            if (!selectedThumbnails.has(thumb)) {
-                                thumb.classList.add('selected');
-                                selectedThumbnails.add(thumb);
-                            }
-                        } else {
-                            if (selectedThumbnails.has(thumb)) {
-                                thumb.classList.remove('selected');
-                                selectedThumbnails.delete(thumb);
-                            }
-                        }
-                    }
-                });
-            }
-            updatePlayButtonState();
-            updateBottomBarInfo();
-        }
-
-        function adjustButtonFontSize(button) {
-            const fontSize = document.getElementById('font-size-slider').value;
-            button.style.fontSize = `${fontSize}px`;
-        }
-
-        function populatePresetSelector() {
-            const presetSelector = document.getElementById('preset-selector');
-            presetSelector.innerHTML = '<option value="">-- Select a Preset --</option>';
-            const presets = JSON.parse(localStorage.getItem('buttonPresets') || '[]');
-            presets.sort((a, b) => a.name.localeCompare(b.name));
-            presets.forEach(preset => {
-                const option = document.createElement('option');
-                option.value = preset.name;
-                option.textContent = preset.name;
-                presetSelector.appendChild(option);
-            });
-        }
-
-        newFilenameBtn.addEventListener('click', () => {
-            filenameBuilderModal.style.display = 'block';
-            initializeFilenameBuilder();
-            populatePresetSelector();
-            // Reset to "create" mode
-            document.getElementById('editing-button-id').value = '';
-            createFilenameButtonBtn.textContent = 'Add Button';
-            document.getElementById('clone-filename-button-btn').style.display = 'none';
-        });
-
-        removeBtn.addEventListener('click', () => {
-            if (buttonsForRemoval.size === 0) {
-                alert('Please select one or more buttons to remove.');
-                return;
-            }
-
-            if (confirm(`Are you sure you want to remove ${buttonsForRemoval.size} button(s)?`)) {
-                const projectData = loadProjectData(directoryName);
-                let buttonTree = projectData.customButtonTree;
-
-                function removeButtonsFromTree(nodes) {
-                    if (!Array.isArray(nodes)) return [];
-
-                    // Filter out leaf buttons that should be removed
-                    let filteredNodes = nodes.filter(node => {
-                        return !(node.type === 'button' && buttonsForRemoval.has(String(node.id)));
-                    });
-
-                    // Recurse into remaining category nodes
-                    return filteredNodes.map(node => {
-                        if (node.type === 'category' && node.children) {
-                            node.children = removeButtonsFromTree(node.children);
-                        }
-                        return node;
-                    // After removing children, a category might become empty. Remove it.
-                    }).filter(node => !(node.type === 'category' && (!node.children || node.children.length === 0)));
-                }
-
-                const newButtonTree = removeButtonsFromTree(buttonTree);
-                projectData.customButtonTree = newButtonTree;
-                saveProjectData(directoryName, projectData);
-
-                buttonsForRemoval.clear();
-                loadCustomButtons(projectData.customButtonTree, projectData.collapseState, projectData.buttonVisibility);
-                updateSidebarActionButtonsState();
-                updateBottomBarInfo();
-                updatePreviewPanel(); // Clear preview panel
-            }
-        });
-
-        filenameBuilderModal.querySelector('.close').addEventListener('click', () => {
-            filenameBuilderModal.style.display = 'none';
-        });
-
-        function makeDraggable(element) {
-            let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
-            let isDragging = false;
-            let mouseDownEvent = null;
-
-            element.addEventListener('dragstart', (e) => e.preventDefault());
-            element.onmousedown = dragMouseDown;
-
-            element.addEventListener('dblclick', () => {
-                playlist = [element];
-                const contentArea = document.getElementById('content-area');
-                const rect = contentArea.getBoundingClientRect();
-                videoOverlay.style.top = `${rect.top}px`;
-                videoOverlay.style.left = `${rect.left}px`;
-                videoOverlay.style.width = `${rect.width}px`;
-                videoOverlay.style.height = `${rect.height}px`;
-                videoOverlay.style.display = 'flex';
-                loadVideo(0);
-            });
-
-            function dragMouseDown(e) {
-                const isPreview = !!element.closest('#preview-container');
-
-                e = e || window.event;
-                e.preventDefault();
-                isDragging = false;
-                mouseDownEvent = e;
-
-                pos3 = e.clientX;
-                pos4 = e.clientY;
-
-                if (!isLayoutFrozen && !isPreview) {
-                    freezeLayout();
-                }
-
-                if (selectedThumbnails.has(element)) {
-                    selectedThumbnails.forEach(thumb => {
-                        thumb.style.zIndex = zIndexCounter++;
-                    });
-                } else {
-                    element.style.zIndex = zIndexCounter++;
-                }
-
-                document.onmouseup = closeDragElement;
-                document.onmousemove = elementDrag;
-            }
-
-            function elementDrag(e) {
-                isDragging = true;
-                e = e || window.event;
-                e.preventDefault();
-
-                pos1 = pos3 - e.clientX;
-                pos2 = pos4 - e.clientY;
-                pos3 = e.clientX;
-                pos4 = e.clientY;
-
-                const isPreview = !!element.closest('#preview-container');
-                const container = isPreview ? previewContainer : thumbnailContainer;
-                const selectionSet = isPreview ? selectedPreviewThumbnails : selectedThumbnails;
-
-                if (selectionSet.has(element)) {
-                    selectionSet.forEach(thumb => {
-                        let newTop = thumb.offsetTop - pos2;
-                        let newLeft = thumb.offsetLeft - pos1;
-
-                        if (newLeft < 0) newLeft = 0;
-                        if (newTop < 0) newTop = 0;
-
-                        thumb.style.top = newTop + "px";
-                        thumb.style.left = newLeft + "px";
-                    });
-                } else {
-                    let newTop = element.offsetTop - pos2;
-                    let newLeft = element.offsetLeft - pos1;
-
-                    if (newLeft < 0) newLeft = 0;
-                    if (newTop < 0) newTop = 0;
-
-                    element.style.top = newTop + "px";
-                    element.style.left = newLeft + "px";
                 }
             }
 
-            function closeDragElement() {
-                const isPreview = !!element.closest('#preview-container');
-                 if (!isDragging) { // This is a click, not a drag
-                    const wrapper = element;
-                    const clickEvent = mouseDownEvent; // Use the stored mousedown event
-                    const selectionSet = isPreview ? selectedPreviewThumbnails : selectedThumbnails;
-
-                    if (isPreview) {
-                        if (selectionSet.has(wrapper)) {
-                            wrapper.classList.remove('selected');
-                            selectionSet.delete(wrapper);
-                        } else {
-                            wrapper.classList.add('selected');
-                            selectionSet.add(wrapper);
-                        }
-                    } else { // Main container logic
-                        if (isMultiSelectMode || (clickEvent && (clickEvent.ctrlKey || clickEvent.metaKey))) {
-                            if (selectionSet.has(wrapper)) {
-                                wrapper.classList.remove('selected');
-                                selectionSet.delete(wrapper);
-                            } else {
-                                wrapper.classList.add('selected');
-                                selectionSet.add(wrapper);
-                            }
-                        } else {
-                            selectionSet.forEach(t => t.classList.remove('selected'));
-                            selectionSet.clear();
-                            wrapper.classList.add('selected');
-                            selectionSet.add(wrapper);
-                        }
-                        updatePlayButtonState();
-                        updateBottomBarInfo();
-                        updatePreviewPanel(); // Update preview on selection change
-                    }
-                }
-
-                document.onmouseup = null;
-                document.onmousemove = null;
-
-                if (!isPreview && isDragging) { // Only save/update spacer if something was dragged in main container
-                    saveCanvasState();
-                    updateContentSpacer();
-                }
-            }
-        }
-
-        function freezeLayout() {
-            const wrappers = thumbnailContainer.querySelectorAll('.thumbnail-wrapper');
-            if (wrappers.length === 0) return;
-
-            const positions = [];
-            wrappers.forEach(wrapper => {
-                positions.push({
-                    left: wrapper.offsetLeft,
-                    top: wrapper.offsetTop
-                });
-            });
-
-            wrappers.forEach((wrapper, index) => {
-                wrapper.style.position = 'absolute';
-                wrapper.style.left = positions[index].left + 'px';
-                wrapper.style.top = positions[index].top + 'px';
-            });
-
-            isLayoutFrozen = true;
-            updateContentSpacer();
-        }
-
-        function sortThumbnails(sortBy) {
-            const canvas = canvases.get(activeCanvasId);
-            if (!canvas) return;
-
-            isLayoutFrozen = false; // Allow grid to be recalculated
-
-            if (sortBy === 'name-asc') {
-                canvas.thumbnails.sort((a, b) => a.dataset.fileName.localeCompare(b.dataset.fileName));
-            } else if (sortBy === 'name-desc') {
-                canvas.thumbnails.sort((a, b) => b.dataset.fileName.localeCompare(a.dataset.fileName));
-            } else if (sortBy === 'date-new') {
-                canvas.thumbnails.sort((a, b) => (b.dataset.lastModified || 0) - (a.dataset.lastModified || 0));
-            } else if (sortBy === 'date-old') {
-                canvas.thumbnails.sort((a, b) => (a.dataset.lastModified || 0) - (b.dataset.lastModified || 0));
-            } else if (sortBy === 'random') {
-                canvas.thumbnails.sort(() => Math.random() - 0.5);
-            }
-            renderCanvas(activeCanvasId);
-            // After rendering a sorted grid, we immediately freeze it to capture positions
-            freezeLayout();
-            saveCanvasState();
-        }
-
-        function sortEditModeRows(sortBy) {
-            const rows = Array.from(thumbnailContainer.querySelectorAll('.landscape-row'));
-            const videoFileMap = new Map(allVideoFiles.map(f => [f.name.substring(0, f.name.lastIndexOf('.')), f]));
-
-            rows.sort((a, b) => {
-                const videoNameA = a.dataset.videoName;
-                const videoNameB = b.dataset.videoName;
-
-                if (sortBy === 'name-asc') {
-                    return videoNameA.localeCompare(videoNameB);
-                } else if (sortBy === 'name-desc') {
-                    return videoNameB.localeCompare(videoNameA);
-                } else if (sortBy === 'random') {
-                    return Math.random() - 0.5;
-                }
-
-                const fileA = videoFileMap.get(videoNameA);
-                const fileB = videoFileMap.get(videoNameB);
-                const dateA = fileA ? fileA.lastModified : 0;
-                const dateB = fileB ? fileB.lastModified : 0;
-
-                if (sortBy === 'date-new') {
-                    return dateB - dateA;
-                } else if (sortBy === 'date-old') {
-                    return dateA - dateB;
-                }
-                return 0;
-            });
-
-            // Re-append rows in sorted order
-            rows.forEach(row => thumbnailContainer.appendChild(row));
-            layoutLandscapeThumbnails(); // Re-layout the view
-        }
-
-        function saveLayout() {
-            const layoutName = layoutNameInput.value.trim();
-            if (!layoutName) {
-                alert('Please enter a name for the layout.');
-                layoutNameInput.focus();
-                return;
-            }
-            if (!isLayoutFrozen) {
-                alert('Please move at least one thumbnail before saving the layout.');
-                return;
-            }
-
-            const thumbnails = document.querySelectorAll('.thumbnail');
-            const layoutData = {
-                positions: {},
-                size: sizeSelector.value
-            };
-            thumbnails.forEach(thumb => {
-                layoutData.positions[thumb.dataset.fileName] = {
-                    left: thumb.style.left,
-                    top: thumb.style.top
-                };
-            });
-
-            const projectData = loadProjectData(directoryName);
-            projectData.layouts[layoutName] = layoutData;
-            saveProjectData(directoryName, projectData);
-
-            layoutNameInput.value = '';
-            populateLayoutsDropdown();
-            alert(`Layout "${layoutName}" saved!`);
-        }
-
-        layoutNameInput.addEventListener('input', () => {
-            if (layoutNameInput.value.trim() !== '') {
-                saveLayoutBtn.textContent = 'Save Layout';
-            }
-        });
-
-        function loadLayout() {
-            const selectedValue = layoutSelect.value;
-            if (!selectedValue) return;
-
-            if (selectedValue.startsWith('scan_')) {
-                const layoutName = selectedValue.replace('scan_', '');
-                const layoutData = scanLayouts[layoutName];
-                if (layoutData) {
-                    applyScanLayout(layoutData);
-                }
-                return;
-            }
-
-            const projectData = loadProjectData(directoryName);
-            const layoutData = projectData.layouts[selectedValue];
-
-            if (!layoutData) return;
-
-            if (!isLayoutFrozen) {
-                freezeLayout();
-            }
-
-            sizeSelector.value = layoutData.size;
-
-            const wrappers = thumbnailContainer.querySelectorAll('.thumbnail-wrapper');
-            wrappers.forEach(wrapper => {
-                const pos = layoutData.positions[wrapper.dataset.fileName];
-                if (pos) {
-                    wrapper.style.left = pos.left;
-                    wrapper.style.top = pos.top;
-                }
-            });
-            layoutThumbnailsInGrid(); // This will handle applying the size and updating the spacer
-            saveCanvasState();
-        }
-
-        function deleteLayout() {
-            const layoutName = layoutSelect.value;
-            if (!layoutName) {
-                alert('Please select a layout to delete.');
-                return;
-            }
-            if (confirm(`Are you sure you want to delete the "${layoutName}" layout?`)) {
-                const projectData = loadProjectData(directoryName);
-                delete projectData.layouts[layoutName];
-                saveProjectData(directoryName, projectData);
-                populateLayoutsDropdown();
-            }
-        }
-
-        function applyScanLayout(layoutData) {
-            if (!isLayoutFrozen) {
-                freezeLayout();
-            }
-
-            const projectData = loadProjectData(directoryName);
-            const verticalPadding = parseInt(projectData.verticalPadding, 10) || 0;
-            const horizontalPadding = parseInt(projectData.horizontalPadding, 10) || 0;
-
-            const allWrappers = Array.from(thumbnailContainer.querySelectorAll('.thumbnail-wrapper'));
-            const wrapperMap = new Map(allWrappers.map(w => [w.dataset.fileName, w]));
-            const placedWrappers = new Set();
-            let currentY = verticalPadding;
-
-            layoutData.sort((a, b) => a.Header.localeCompare(b.Header));
-
-            layoutData.forEach(group => {
-                if (group.IsGroup && Array.isArray(group.AllChildren)) {
-                    let currentX = horizontalPadding;
-                    let maxRowHeight = 0;
-
-                    group.AllChildren.forEach(child => {
-                        const pathParts = child.Item.ItemInfo.Path.split('\\');
-                        const videoFilename = pathParts[pathParts.length - 1];
-                        const thumbFilename = videoFilename.substring(0, videoFilename.lastIndexOf('.')) + '.jpg';
-
-                        const wrapper = wrapperMap.get(thumbFilename);
-                        if (wrapper) {
-                            if (currentX > horizontalPadding && currentX + wrapper.offsetWidth > thumbnailContainer.clientWidth) {
-                                currentX = horizontalPadding;
-                                currentY += maxRowHeight + verticalPadding;
-                                maxRowHeight = 0;
-                            }
-                            wrapper.style.left = currentX + 'px';
-                            wrapper.style.top = currentY + 'px';
-                            currentX += wrapper.offsetWidth + horizontalPadding;
-                            if (wrapper.offsetHeight > maxRowHeight) {
-                                maxRowHeight = wrapper.offsetHeight;
-                            }
-                            placedWrappers.add(wrapper);
-                        }
-                    });
-
-                    if (group.AllChildren.length > 0) {
-                        currentY += maxRowHeight + verticalPadding; // Move to the next row for the next group
-                    }
-                }
-            });
-
-            // Handle ungrouped thumbnails
-            let currentX = horizontalPadding;
-            let maxRowHeight = 0;
-            allWrappers.forEach(wrapper => {
-                if (!placedWrappers.has(wrapper)) {
-                    if (currentX > horizontalPadding && currentX + wrapper.offsetWidth > thumbnailContainer.clientWidth) {
-                        currentX = horizontalPadding;
-                        currentY += maxRowHeight + verticalPadding;
-                        maxRowHeight = 0;
-                    }
-                    wrapper.style.left = currentX + 'px';
-                    wrapper.style.top = currentY + 'px';
-                    currentX += wrapper.offsetWidth + horizontalPadding;
-                    if (wrapper.offsetHeight > maxRowHeight) {
-                        maxRowHeight = wrapper.offsetHeight;
-                    }
-                }
-            });
-
-            updateContentSpacer();
-            saveCanvasState();
-        }
-
-        function populateLayoutsDropdown() {
-            const projectData = loadProjectData(directoryName);
-            const savedLayoutNames = Object.keys(projectData.layouts);
-            const scanLayoutNames = Object.keys(scanLayouts);
-
-            layoutSelect.innerHTML = '<option value="" disabled hidden>Select Layout</option>';
-
-            if (scanLayoutNames.length > 0) {
-                const scanGroup = document.createElement('optgroup');
-                scanGroup.label = 'Scan Layouts';
-                scanLayoutNames.forEach(name => {
-                    const option = document.createElement('option');
-                    option.value = `scan_${name}`;
-                    option.textContent = name;
-                    scanGroup.appendChild(option);
-                });
-                layoutSelect.appendChild(scanGroup);
-            }
-
-            if (savedLayoutNames.length > 0) {
-                const savedGroup = document.createElement('optgroup');
-                savedGroup.label = 'Saved Layouts';
-                savedLayoutNames.forEach(name => {
-                    const option = document.createElement('option');
-                    option.value = name;
-                    option.textContent = name;
-                    savedGroup.appendChild(option);
-                });
-                layoutSelect.appendChild(savedGroup);
-            }
-        }
-
-        function startSelection(e) {
-            if (e.target !== thumbnailContainer) return;
-            e.preventDefault();
-
-            const containerRect = thumbnailContainer.getBoundingClientRect();
-            let startX = e.clientX - containerRect.left + thumbnailContainer.scrollLeft;
-            let startY = e.clientY - containerRect.top + thumbnailContainer.scrollTop;
-
-            selectionBox.style.left = startX + 'px';
-            selectionBox.style.top = startY + 'px';
-            selectionBox.style.width = '0px';
-            selectionBox.style.height = '0px';
-            selectionBox.style.display = 'block';
-
-            document.addEventListener('mousemove', handleSelection);
-            document.addEventListener('mouseup', endSelection);
-
-            function handleSelection(e) {
-                let currentX = e.clientX - containerRect.left + thumbnailContainer.scrollLeft;
-                let currentY = e.clientY - containerRect.top + thumbnailContainer.scrollTop;
-
-                let newLeft = Math.min(startX, currentX);
-                let newTop = Math.min(startY, currentY);
-                let newWidth = Math.abs(startX - currentX);
-                let newHeight = Math.abs(startY - currentY);
-
-                selectionBox.style.left = newLeft + 'px';
-                selectionBox.style.top = newTop + 'px';
-                selectionBox.style.width = newWidth + 'px';
-                selectionBox.style.height = newHeight + 'px';
-            }
-
-            function endSelection(e) {
-                document.removeEventListener('mousemove', handleSelection);
-                document.removeEventListener('mouseup', endSelection);
-
-                selectThumbnailsInBox();
-                selectionBox.style.display = 'none';
-            }
-        }
-
-        function selectThumbnailsInBox() {
-            const boxRect = selectionBox.getBoundingClientRect();
-            const wrappers = document.querySelectorAll('.thumbnail-wrapper');
-
-            if (!isMultiSelectMode) {
-                selectedThumbnails.forEach(t => t.classList.remove('selected'));
-                selectedThumbnails.clear();
-            }
-
-            wrappers.forEach(wrapper => {
-                const wrapperRect = wrapper.getBoundingClientRect();
-
-                if (
-                    boxRect.left < wrapperRect.right &&
-                    boxRect.right > wrapperRect.left &&
-                    boxRect.top < wrapperRect.bottom &&
-                    boxRect.bottom > wrapperRect.top
-                ) {
-                    if (!selectedThumbnails.has(wrapper)) {
-                       wrapper.classList.add('selected');
-                       selectedThumbnails.add(wrapper);
-                    }
-                }
-            });
-            updatePlayButtonState();
-            updateBottomBarInfo();
-            updatePreviewPanel();
-            saveCanvasState();
-        }
-
-        const resizer = document.getElementById('sidebar-resizer');
-        const sidebar = document.getElementById('sidebar');
-
-        resizer.addEventListener('mousedown', (e) => {
-            e.preventDefault();
-
-            const handleMouseUp = () => {
-                document.removeEventListener('mousemove', handleMouseMove);
-                document.removeEventListener('mouseup', handleMouseUp);
-
-                // Adjust font size for all buttons after resizing
-                const buttons = document.querySelectorAll('#sidebar-scroll-container button');
-                buttons.forEach(button => adjustButtonFontSize(button));
-            };
-
-            document.addEventListener('mousemove', handleMouseMove);
-            document.addEventListener('mouseup', handleMouseUp);
-        });
-
-        function handleMouseMove(e) {
-            const newWidth = e.clientX;
-            if (newWidth > 100 && newWidth < 500) { // Min and max width
-                sidebar.style.width = newWidth + 'px';
-            }
-        }
-
-        previewBtn.addEventListener('click', () => {
-            const isHidden = rightSidebar.style.display === 'none';
-            rightSidebar.style.display = isHidden ? 'flex' : 'none';
-
-            if (directoryName) {
-                const projectData = loadProjectData(directoryName);
-                projectData.previewSidebarVisible = isHidden;
-                saveProjectData(directoryName, projectData);
-            }
-        });
-
-        document.getElementById('play-all-preview-btn').addEventListener('click', () => {
-            const previewThumbnails = Array.from(previewContainer.querySelectorAll('.thumbnail-wrapper'));
-            if (previewThumbnails.length > 0) {
-                playlist = previewThumbnails;
-                videoOverlay.style.display = 'flex';
-                loadVideo(0);
-            }
-        });
-
-        const rightResizer = document.getElementById('right-sidebar-resizer');
-        rightResizer.addEventListener('mousedown', (e) => {
-            e.preventDefault();
-
-            const handleRightMouseUp = () => {
-                document.removeEventListener('mousemove', handleRightMouseMove);
-                document.removeEventListener('mouseup', handleRightMouseUp);
-
-                if (directoryName) {
-                    const projectData = loadProjectData(directoryName);
-                    projectData.previewSidebarWidth = parseInt(rightSidebar.style.width, 10);
-                    saveProjectData(directoryName, projectData);
-                }
-            };
-
-            document.addEventListener('mousemove', handleRightMouseMove);
-            document.addEventListener('mouseup', handleRightMouseUp);
-        });
-
-        function handleRightMouseMove(e) {
-            const contentArea = document.getElementById('content-area');
-            const newWidth = contentArea.getBoundingClientRect().right - e.clientX;
-            if (newWidth > 100 && newWidth < 500) { // Min and max width
-                rightSidebar.style.width = newWidth + 'px';
-                if (sizeSelector.value !== 'list') {
-                    isLayoutFrozen = false; // Force unfreeze before recalculating
-                    layoutThumbnailsInGrid(); // Recalculate grid on resize
-                }
-            }
-        }
-
-        function updatePreviewPanel(buttonData) {
-            previewContainer.innerHTML = '';
-            let thumbnailsToPreview = [];
-
-            if (buttonData) {
-                // If a button is provided, find all matching thumbnails across all canvases.
-                const { path, fullButtonText, specialType } = buttonData;
-                const isCategoryOnly = specialType === 'plusOne';
-                const username = projectUsernameInput.value.trim() || 'username';
-                const category = path[0];
-                const prefix = `[${username}]_${category}`;
-
-                for (const canvas of canvases.values()) {
-                    canvas.thumbnails.forEach(thumb => {
-                        const baseFilename = thumb.dataset.fileName.substring(0, thumb.dataset.fileName.lastIndexOf('.'));
-                        const filenameWithoutNumber = baseFilename.replace(/\s*\(\d+\)$/, '').trim();
-
-                        let matches = false;
-                        if (isCategoryOnly) {
-                             matches = filenameWithoutNumber.startsWith(prefix);
-                        } else {
-                            const expectedFilenamePart = `${prefix} ${fullButtonText}`;
-                            matches = filenameWithoutNumber.startsWith(expectedFilenamePart);
-                        }
-
-                        if (matches) {
-                            thumbnailsToPreview.push(thumb);
-                        }
-                    });
-                }
-            } else if (selectedThumbnails.size > 0) {
-                // If no button is provided, use the currently selected thumbnails.
-                thumbnailsToPreview = Array.from(selectedThumbnails);
-            }
-
-            thumbnailsToPreview.sort((a, b) => a.dataset.fileName.localeCompare(b.dataset.fileName));
-
-            thumbnailsToPreview.forEach(thumb => {
-                const clone = thumb.cloneNode(true);
-                clone.style.position = 'relative';
-                clone.style.left = 'auto';
-                clone.style.top = 'auto';
-                clone.style.marginBottom = '5px';
-                clone.classList.remove('selected'); // Clones shouldn't carry over selection state
-
-                makeDraggable(clone);
-
-                previewContainer.appendChild(clone);
-            });
-
-            // Apply the layout after the DOM has been updated
-            requestAnimationFrame(() => {
-                const currentPreviewSize = document.getElementById('preview-size-selector').value;
-                layoutPreviewPane(currentPreviewSize);
-            });
-        }
-
-        function layoutPreviewPane(size) {
-            const container = document.getElementById('preview-container');
-            if (!container) return;
-            const wrappers = container.querySelectorAll('.thumbnail-wrapper');
-            const projectData = loadProjectData(directoryName);
-            const verticalPadding = Number(projectData.previewVerticalPadding) || 5;
-            const padding = 5; // Horizontal padding remains 5
-
-            // Clear any existing absolute positioning before recalculating
-            wrappers.forEach(w => {
-                w.style.position = 'relative';
-                w.style.left = '';
-                w.style.top = '';
-            });
-
-            if (size === 'list') {
-                wrappers.forEach(wrapper => {
-                    // Reset styles for list view
-                    wrapper.style.position = 'relative';
-                    wrapper.style.left = '';
-                    wrapper.style.top = '';
-                    wrapper.classList.add('list-view');
-                    const thumb = wrapper.querySelector('.thumbnail');
-                    if (thumb) {
-                        thumb.style.width = '128px'; // Fixed size for list view
-                        thumb.style.height = '72px';
-                    }
-                });
-            } else {
-                // GRID VIEW LOGIC
-                wrappers.forEach(wrapper => {
-                    wrapper.classList.remove('list-view');
-                    // Reset/set styles for grid view display
-                    const thumb = wrapper.querySelector('.thumbnail');
-                    if (thumb) thumb.style.display = ''; // Reset to default display (inline)
-
-                    const nameDiv = wrapper.querySelector('.thumbnail-name');
-                    if (nameDiv) nameDiv.style.display = 'none';
-
-                    const canvasNamePlaceholder = wrapper.querySelector('.canvas-name-placeholder');
-                    if (canvasNamePlaceholder) canvasNamePlaceholder.style.display = 'none';
-                    const newFilenamePlaceholder = wrapper.querySelector('.new-filename-placeholder');
-                    if (newFilenamePlaceholder) newFilenamePlaceholder.style.display = 'none';
-                });
-
-                const scale = parseFloat(size);
-                const containerWidth = container.clientWidth;
-                let xOffset = padding;
-                let yOffset = verticalPadding;
-                let maxRowHeight = 0;
-
-                wrappers.forEach(wrapper => {
-                    const thumb = wrapper.querySelector('.thumbnail');
-                    const nameDiv = wrapper.querySelector('.thumbnail-name');
-
-                    const originalWidth = parseFloat(thumb.dataset.originalWidth || 256);
-                    const originalHeight = parseFloat(thumb.dataset.originalHeight || 144);
-
-                    const scaledWidth = originalWidth * scale;
-                    const scaledHeight = originalHeight * scale;
-
-                    let nameHeight = 0;
-                    if (nameDiv) {
-                        const originalDisplay = nameDiv.style.display;
-                        nameDiv.style.display = 'block'; // Ensure it's visible for measurement
-                        nameDiv.style.maxWidth = scaledWidth + 'px';
-                        nameHeight = nameDiv.offsetHeight;
-                        nameDiv.style.display = originalDisplay;
-                    }
-
-                    const wrapperHeight = scaledHeight + nameHeight;
-
-                    if (xOffset + scaledWidth + padding > containerWidth && xOffset > padding) {
-                        xOffset = padding;
-                        yOffset += maxRowHeight + verticalPadding;
-                        maxRowHeight = 0;
-                    }
-
-                    wrapper.style.position = 'absolute';
-                    wrapper.style.left = xOffset + 'px';
-                    wrapper.style.top = yOffset + 'px';
-                    thumb.style.width = scaledWidth + 'px';
-                    thumb.style.height = scaledHeight + 'px';
-
-                    if (wrapperHeight > maxRowHeight) {
-                        maxRowHeight = wrapperHeight;
-                    }
-
-                    xOffset += scaledWidth + padding;
-                });
-            }
-        }
-
-        const previewSizeSelector = document.getElementById('preview-size-selector');
-        previewSizeSelector.addEventListener('change', (event) => {
-            const newSize = event.target.value;
-            layoutPreviewPane(newSize);
-            if (directoryName) {
-                const projectData = loadProjectData(directoryName);
-                projectData.previewThumbnailSize = newSize;
-                saveProjectData(directoryName, projectData);
-            }
-        });
-
-
-        generateEditThumbnailsNewBtn.addEventListener('click', () => {
-            const trackingFileName = 'processed_edit_mode_videos.txt';
-            const script = [
-                '@echo off',
-                'setlocal enabledelayedexpansion',
-                'cd /d "%~dp0"',
-                'echo Generating edit thumbnails for new files...',
-                'if not exist "Edit Thumbnails" mkdir "Edit Thumbnails"',
-                `set "trackingFile=${trackingFileName}"`,
-                'if not exist "!trackingFile!" ( echo. > "!trackingFile!" )',
-                '',
-                'for %%F in (*.mp4, *.avi, *.mov, *.mkv) do (',
-                '    set "videoFile=%%F"',
-                '    findstr /x /c:"!videoFile!" "!trackingFile!" >nul',
-                '    if errorlevel 1 (',
-                '        echo Processing new file: !videoFile!',
-                '        set "baseName=%%~nF"',
-                `        for /f "delims=" %%a in ('ffprobe -v error -show_entries format^=duration -of default^=noprint_wrappers^=1:nokey^=1 "!videoFile!"') do (`,
-                '            set "duration_str=%%a"',
-                '        )',
-                '        for /f "delims=." %%a in ("!duration_str!") do set "duration_int=%%a"',
-                '        if !duration_int! equ 0 set "duration_int=10"',
-                '        set /a "interval = !duration_int! / 10"',
-                '        if !interval! equ 0 set "interval=1"',
-                '        for /l %%i in (1, 1, 10) do (',
-                '            set /a "timestamp = (%%i - 1) * !interval!"',
-                `            ffmpeg -ss !timestamp! -i "!videoFile!" -vframes 1 -vf "scale=256:256:force_original_aspect_ratio=decrease" -y "Edit Thumbnails\\!baseName!_%%i.jpg" >nul 2>&1`,
-                '            if errorlevel 1 (',
-                '                echo Failed to generate thumbnail %%i for !videoFile!',
-                '            )',
-                '        )',
-                '        echo !videoFile!>> "!trackingFile!"',
-                '    )',
-                ')',
-                '',
-                'echo Thumbnail generation for new files complete.',
-                'pause'
-            ].join('\r\n');
-
-            editScriptModal.querySelector('h2').textContent = 'Generate Thumbnails for Edit Mode for New Files';
-            document.getElementById('edit-batch-script').value = script;
-            const blob = new Blob([script], { type: 'text/plain;charset=utf-8' });
-            document.getElementById('download-edit-script-link').href = URL.createObjectURL(blob);
-            document.getElementById('download-edit-script-link').download = 'generate_edit_thumbnails_new.bat';
-            editScriptModal.style.display = 'block';
-        });
-
-        generateFolderThumbnailsBtn.addEventListener('click', () => {
-            const script = [
-                '@echo off',
-                'echo This will delete and regenerate all thumbnails in the Thumbnails folder.',
-                'pause',
-                'if exist "Thumbnails" ( rmdir /S /Q "Thumbnails" )',
-                'mkdir "Thumbnails"',
-                ...allVideoFiles.map(file => {
-                    const fileName = file.name;
-                    const thumbnailName = fileName.substring(0, fileName.lastIndexOf('.')) + '.jpg';
-                    return `ffmpeg -y -i "${fileName}" -ss 00:00:02.000 -frames:v 1 -vf "scale=256:256:force_original_aspect_ratio=decrease" "Thumbnails\\${thumbnailName}" >nul 2>&1 || echo Failed to generate thumbnail for ${fileName}`;
-                }),
-                'echo.',
-                'echo Thumbnail regeneration complete.',
-                'pause'
-            ].join('\r\n');
-
-            batchScriptTextArea.value = script;
-            const blob = new Blob([script], { type: 'text/plain;charset=utf-8' });
-            downloadScriptLink.href = URL.createObjectURL(blob);
-            downloadScriptLink.download = 'generate_folder_thumbnails.bat';
-            scriptModal.style.display = 'block';
-        });
-
-        refreshThumbnailsBtn.addEventListener('click', () => {
-            const script = [
-                '@echo off',
-                'setlocal enabledelayedexpansion',
-                'cd /d "%~dp0"',
-                'echo Refreshing thumbnails...',
-                'set "videoFiles=video_files.tmp"',
-                '> "!videoFiles!" (',
-                ...allVideoFiles.map(file => `    echo ${file.name.substring(0, file.name.lastIndexOf('.'))}`),
-                ')',
-                '',
-                'for %%f in ("Thumbnails\\*.jpg") do (',
-                '    set "thumbName=%%~nf"',
-                '    findstr /x /c:"!thumbName!" "!videoFiles!" >nul',
-                '    if errorlevel 1 (',
-                '        echo Deleting orphaned thumbnail: %%f',
-                '        del "%%f"',
-                '    )',
-                ')',
-                '',
-                'del "!videoFiles!"',
-                '',
-                ...allVideoFiles.map(file => {
-                    const fileName = file.name;
-                    const thumbnailName = fileName.substring(0, fileName.lastIndexOf('.')) + '.jpg';
-                    return `if not exist "Thumbnails\\${thumbnailName}" ( ffmpeg -y -i "${fileName}" -ss 00:00:02.000 -frames:v 1 -vf "scale=256:256:force_original_aspect_ratio=decrease" "Thumbnails\\${thumbnailName}" >nul 2>&1 || echo Failed to generate thumbnail for ${fileName} )`;
-                }),
-                'echo.',
-                'echo Thumbnail refresh complete.',
-                'pause'
-            ].join('\r\n');
-
-            batchScriptTextArea.value = script;
-            const blob = new Blob([script], { type: 'text/plain;charset=utf-8' });
-            downloadScriptLink.href = URL.createObjectURL(blob);
-            downloadScriptLink.download = 'refresh_thumbnails.bat';
-            scriptModal.style.display = 'block';
-        });
-
-        document.getElementById('export-project-btn').addEventListener('click', () => {
-            if (!directoryName) {
-                alert('Please load a directory first.');
-                return;
-            }
-            const projectData = loadProjectData(directoryName);
-            const dataStr = JSON.stringify(projectData, null, 2);
-            const blob = new Blob([dataStr], {type: 'application/json'});
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `${directoryName}-project.json`;
-            a.click();
-            URL.revokeObjectURL(url);
-        });
-
-        document.getElementById('information-btn').addEventListener('click', async () => {
-            if (!directoryName) {
-                alert('Please load a directory first.');
-                return;
-            }
-
-            let totalThumbnails = 0;
-            for (const canvas of canvases.values()) {
-                totalThumbnails += canvas.thumbnails.length;
-            }
-
-            let editModeFilesCount = 0;
             try {
-                const editDirHandle = await currentDirHandle.getDirectoryHandle('Edit Thumbnails');
-                const uniqueVideoNames = new Set();
+                await currentDirHandle.getDirectoryHandle('Edit Thumbnails');
+                projectFolders.push({ handle: currentDirHandle, path: '', name: currentDirHandle.name });
+            } catch (e) {
+                await findProjectFolders(currentDirHandle);
+            }
+
+
+            if (projectFolders.length === 0) {
+                alert('No "Edit Thumbnails" folders found in the selected directory or its subdirectories.');
+                return;
+            }
+
+            for (const project of projectFolders) {
+                const header = document.createElement('h2');
+                header.className = 'project-header';
+                header.textContent = project.name;
+                thumbnailContainer.appendChild(header);
+
+                let mostRecentShortcutTime = 0;
+                try {
+                    const scDirHandle = await project.handle.getDirectoryHandle('sc');
+                    for await (const entry of scDirHandle.values()) {
+                        if (entry.kind === 'file' && entry.name.endsWith('.lnk')) {
+                            const file = await entry.getFile();
+                            if (file.lastModified > mostRecentShortcutTime) {
+                                mostRecentShortcutTime = file.lastModified;
+                            }
+                        }
+                    }
+                } catch(e) { /* no sc folder */ }
+
+                const editDirHandle = await project.handle.getDirectoryHandle('Edit Thumbnails');
+                const landscapeFiles = [];
                 for await (const entry of editDirHandle.values()) {
                     if (entry.kind === 'file' && entry.name.match(/\.(jpe?g|png|gif|webp)$/i)) {
-                        const videoName = entry.name.substring(0, entry.name.lastIndexOf('_'));
-                        uniqueVideoNames.add(videoName);
+                        const file = await entry.getFile();
+                        if (file.lastModified > mostRecentShortcutTime) {
+                            landscapeFiles.push(file);
+                        }
                     }
                 }
-                editModeFilesCount = uniqueVideoNames.size;
-            } catch (e) {
-                // Edit Thumbnails directory doesn't exist, so the count is 0.
-            }
+                allVideoFiles = []; // Clear for each project
+                for await (const entry of project.handle.values()) {
+                    if (entry.kind === 'file' && entry.name.match(/\.(mp4|avi|mov|mkv)$/i)) {
+                        allVideoFiles.push(await entry.getFile());
+                    }
+                }
 
-            alert(
-                `Information:\n\n` +
-                `- Thumbnails Loaded: ${totalThumbnails}\n` +
-                `- Files in Edit Mode: ${editModeFilesCount}`
-            );
-        });
+                const groupedFiles = landscapeFiles.reduce((acc, file) => {
+                    const videoName = file.name.substring(0, file.name.lastIndexOf('_'));
+                    if (!acc[videoName]) acc[videoName] = [];
+                    acc[videoName].push(file);
+                    return acc;
+                }, {});
 
-        function getBaseName(fileName) {
-            // First, try to match the pattern with a numerical suffix like " (1)"
-            const baseNameMatch = fileName.match(/^(.*) \(\d+\)\.\w+$/);
-            if (baseNameMatch && baseNameMatch[1]) {
-                return baseNameMatch[1];
+                let videoNames = Object.keys(groupedFiles);
+                const videoFileMap = new Map(allVideoFiles.map(f => [f.name.substring(0, f.name.lastIndexOf('.')), f]));
+
+                videoNames.sort((a, b) => {
+                    if (sortBy === 'name-asc') return a.localeCompare(b);
+                    if (sortBy === 'name-desc') return b.localeCompare(a);
+                    const fileA = videoFileMap.get(a);
+                    const fileB = videoFileMap.get(b);
+                    const dateA = fileA ? fileA.lastModified : 0;
+                    const dateB = fileB ? fileB.lastModified : 0;
+                    if (sortBy === 'date-new') return dateB - dateA;
+                    if (sortBy === 'date-old') return dateA - dateB;
+                    return 0;
+                });
+
+                for (const videoName of videoNames) {
+                    const files = groupedFiles[videoName].sort((a, b) => {
+                        const aNum = parseInt(a.name.substring(a.name.lastIndexOf('_') + 1));
+                        const bNum = parseInt(b.name.substring(b.name.lastIndexOf('_') + 1));
+                        return aNum - bNum;
+                    });
+
+                    const rowDiv = document.createElement('div');
+                    rowDiv.className = 'landscape-row';
+                    rowDiv.dataset.videoName = videoName;
+                    rowDiv.dataset.projectPath = project.path;
+                    thumbnailContainer.appendChild(rowDiv);
+
+                    rowDiv.addEventListener('click', () => {
+                        rowDiv.classList.toggle('selected-shortcut');
+                        const selectionData = { videoName: videoName, projectPath: project.path };
+
+                        let found = false;
+                        shortcutSelections.forEach(s => {
+                            if (s.videoName === selectionData.videoName && s.projectPath === selectionData.projectPath) {
+                                found = true;
+                                shortcutSelections.delete(s);
+                            }
+                        });
+
+                        if (!found) {
+                            shortcutSelections.add(selectionData);
+                        }
+                    });
+
+                    const imageLoadPromises = files.map(file => {
+                        return new Promise((resolve, reject) => {
+                            const img = new Image();
+                            img.onload = () => {
+                                img.className = 'thumbnail';
+                                img.dataset.fileName = file.name;
+                                img.dataset.originalWidth = img.width;
+                                img.dataset.originalHeight = img.height;
+                                rowDiv.appendChild(img);
+                                resolve();
+                            };
+                            img.onerror = reject;
+                            img.src = URL.createObjectURL(file);
+                        });
+                    });
+                    await Promise.all(imageLoadPromises);
+                }
+                 const hr = document.createElement('hr');
+                thumbnailContainer.appendChild(hr);
             }
-            // If it doesn't match, just remove the extension as a fallback.
-            const lastDotIndex = fileName.lastIndexOf('.');
-            if (lastDotIndex > 0) {
-                return fileName.substring(0, lastDotIndex);
-            }
-            return fileName; // Return the whole string if no extension found
+            layoutLandscapeThumbnails();
         }
 
-        document.getElementById('recalculate-suffix-btn').addEventListener('click', () => {
-            if (!directoryName) {
-                alert('Please load a directory first.');
-                return;
-            }
-
-            const renamedCanvas = Array.from(canvases.values()).find(c => c.name === 'Renamed');
-            if (!renamedCanvas || renamedCanvas.thumbnails.length === 0) {
-                alert('The "Renamed" canvas is empty. Nothing to recalculate.');
-                return;
-            }
-
-            const groupedByBase = new Map();
-            renamedCanvas.thumbnails.forEach(thumb => {
-                const baseName = getBaseName(thumb.dataset.fileName);
-                if (!groupedByBase.has(baseName)) {
-                    groupedByBase.set(baseName, []);
+        window.onload = () => {
+            loadButton.addEventListener('click', async () => {
+                try {
+                    const dirHandle = await window.showDirectoryPicker();
+                    currentDirHandle = dirHandle;
+                    await renderShortcutMode();
+                } catch (err) {
+                    if (err.name !== 'AbortError') console.error('Failed to open directory:', err);
                 }
-                groupedByBase.get(baseName).push(thumb);
             });
 
-            groupedByBase.forEach((thumbnails, baseName) => {
-                // Sort to ensure a consistent renumbering order
-                thumbnails.sort((a, b) => a.dataset.fileName.localeCompare(b.dataset.fileName));
+            scriptModal.querySelector('.close').addEventListener('click', () => scriptModal.style.display = 'none');
 
-                thumbnails.forEach((thumb, index) => {
-                    const newSuffix = `(${index + 1})`;
-                    const newFilename = `${baseName} ${newSuffix}.jpg`;
-
-                    // Update all relevant places
-                    thumb.dataset.fileName = newFilename;
-                    thumb.querySelector('.thumbnail').dataset.fileName = newFilename;
-                    const nameDiv = thumb.querySelector('.thumbnail-name');
-                    if (nameDiv) nameDiv.textContent = newFilename;
-                    const newFilenamePlaceholder = thumb.querySelector('.new-filename-placeholder');
-                    if (newFilenamePlaceholder) newFilenamePlaceholder.textContent = newFilename;
+            copyScriptBtn.addEventListener('click', () => {
+                 batchScriptTextArea.select();
+                 navigator.clipboard.writeText(batchScriptTextArea.value).then(() => {
+                    alert('Script copied to clipboard!');
                 });
             });
 
-            saveCanvasState();
-            renderCanvas(renamedCanvas.id); // Re-render to show changes
-            alert('Suffixes in the "Renamed" canvas have been recalculated and compacted.');
-        });
-
-        document.getElementById('import-project-btn').addEventListener('click', () => {
-            if (!directoryName) {
-                alert('Please load a directory first.');
-                return;
-            }
-            const input = document.createElement('input');
-            input.type = 'file';
-            input.accept = '.json';
-            input.onchange = e => {
-                const file = e.target.files[0];
-                const reader = new FileReader();
-                reader.onload = readerEvent => {
-                    try {
-                        const projectData = JSON.parse(readerEvent.target.result);
-                        // We can add more validation here, e.g., checking version
-                        saveProjectData(directoryName, projectData);
-                        alert('Project data imported successfully! Reloading...');
-                        location.reload();
-                    } catch (err) {
-                        alert('Failed to parse project file.');
-                    }
+            shortcutScriptBtn.addEventListener('click', () => {
+                if (shortcutSelections.size === 0) {
+                    alert('Please select one or more thumbnails to create shortcuts for.');
+                    return;
                 }
-                reader.readAsText(file);
-            }
-            input.click();
-        });
+                generateShortcutScript();
+                scriptModal.style.display = 'block';
+            });
 
-        window.onload = init;
+            sizeSelector.addEventListener('change', () => layoutLandscapeThumbnails());
 
-        // --- Test hook for Playwright ---
-        class MockFileHandle {
-            constructor(name) {
-                this.name = name;
-                this.kind = 'file';
-            }
-            async getFile() {
-                // Return a real 1x1 pixel GIF to ensure Image.onload fires.
-                const base64Gif = 'R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
-                const byteCharacters = atob(base64Gif);
-                const byteNumbers = new Array(byteCharacters.length);
-                for (let i = 0; i < byteCharacters.length; i++) {
-                    byteNumbers[i] = byteCharacters.charCodeAt(i);
+            sortSelector.addEventListener('change', (e) => {
+                if(currentDirHandle) {
+                    renderShortcutMode(e.target.value);
                 }
-                const byteArray = new Uint8Array(byteNumbers);
-                const blob = new Blob([byteArray], {type: 'image/gif'});
-                return new File([blob], this.name, { type: 'image/gif' });
-            }
-        }
-
-        class MockDirectoryHandle {
-            constructor(name, entries) {
-                this.name = name;
-                this.kind = 'directory';
-                this._entries = entries; // A map of names to handles
-            }
-
-            async getDirectoryHandle(name) {
-                const entry = this._entries.get(name);
-                if (entry && entry.kind === 'directory') {
-                    return entry;
-                }
-                throw new DOMException('NotFoundError');
-            }
-
-            async *values() {
-                for (const value of this._entries.values()) {
-                    yield value;
-                }
-            }
-        }
-
-        document.getElementById('test-hook-load-dir').addEventListener('click', async () => {
-            console.log("Test hook for complete directory clicked");
-            const rootThumbnailsDir = new MockDirectoryHandle('Thumbnails', new Map([
-                ['video1.jpg', new MockFileHandle('video1.jpg')]
-            ]));
-            const landscapeThumbnailsDir = new MockDirectoryHandle('Thumbnails', new Map([
-                ['video2.jpg', new MockFileHandle('video2.jpg')]
-            ]));
-            const landscapeDir = new MockDirectoryHandle('Landscape', new Map([
-                ['video2.mp4', new MockFileHandle('video2.mp4')],
-                ['Thumbnails', landscapeThumbnailsDir]
-            ]));
-
-            const rootDir = new MockDirectoryHandle('verification-complete', new Map([
-                ['video1.mp4', new MockFileHandle('video1.mp4')],
-                ['Thumbnails', rootThumbnailsDir],
-                ['Landscape', landscapeDir]
-            ]));
-
-            try {
-                await processDirectory(rootDir);
-                 console.log("processDirectory for complete dir finished");
-            } catch(e) {
-                console.error("Error in test hook processDirectory:", e);
-            }
-        });
-
-        // Test hook for missing edit thumbnails scenario
-        document.querySelector('.top-bar').insertAdjacentHTML('beforeend', '<button id="test-hook-missing-edit-thumbs" style="display:none;">Test Hook Missing Edit Thumbs</button>');
-        document.getElementById('test-hook-missing-edit-thumbs').addEventListener('click', async () => {
-            const editThumbnailsDir = new MockDirectoryHandle('Edit Thumbnails', new Map()); // Empty edit thumbs
-            const thumbnailsDir = new MockDirectoryHandle('Thumbnails', new Map([
-                ['video1.jpg', new MockFileHandle('video1.jpg')]
-            ]));
-
-            const rootDir = new MockDirectoryHandle('verification-missing-thumbs', new Map([
-                ['video1.mp4', new MockFileHandle('video1.mp4')],
-                ['Thumbnails', thumbnailsDir],
-                ['Edit Thumbnails', editThumbnailsDir]
-            ]));
-
-            try {
-                await processDirectory(rootDir);
-            } catch (e) {
-                console.error("Error in missing-thumbs test hook:", e);
-            }
-        });
-
-        // --- Test hook for the long filename truncation issue ---
-        document.querySelector('.top-bar').insertAdjacentHTML('beforeend', '<button id="test-hook-long-filename" style="display:none;">Test Hook Long Filename</button>');
-        document.getElementById('test-hook-long-filename').addEventListener('click', async () => {
-            const longFilename = '[username]_Misc (Top) (Black Logo Sleeveless Crop 1) (Bedroom 1) (Multiple) (Landscape) (1).jpg';
-            const originalFilename = 'b2 - 7554368673050365206.jpg';
-
-            const thumbnailsDir = new MockDirectoryHandle('Thumbnails', new Map([
-                [longFilename, new MockFileHandle(longFilename)]
-            ]));
-
-            const rootDir = new MockDirectoryHandle('verification-long-filename', new Map([
-                [originalFilename.replace('.jpg', '.mp4'), new MockFileHandle(originalFilename.replace('.jpg', '.mp4'))],
-                ['Thumbnails', thumbnailsDir]
-            ]));
-
-            try {
-                // Manually create a single canvas with the problematic thumbnail
-                canvases.clear();
-                const wrapper = document.createElement('div');
-                wrapper.classList.add('thumbnail-wrapper');
-                wrapper.dataset.fileName = longFilename;
-                const nameDiv = document.createElement('div');
-                nameDiv.classList.add('thumbnail-name');
-                nameDiv.textContent = longFilename;
-                nameDiv.dataset.originalFilename = originalFilename;
-                wrapper.appendChild(nameDiv);
-                 const newFilenameDiv = document.createElement('div');
-                newFilenameDiv.classList.add('new-filename-placeholder');
-                wrapper.appendChild(newFilenameDiv);
-                const canvasNameDiv = document.createElement('div');
-                canvasNameDiv.classList.add('canvas-name-placeholder');
-                wrapper.appendChild(canvasNameDiv);
-
-
-                canvases.set(1, { id: 1, name: 'Canvas 1', thumbnails: [wrapper], settings: { thumbnailSize: '1' } });
-                activeCanvasId = 1;
-                directoryName = 'verification-long-filename';
-
-                renderCanvas(1);
-            } catch(e) {
-                console.error("Error in long-filename test hook:", e);
-            }
-        });
-
-        document.getElementById('test-hook-load-padding-dir').addEventListener('click', async () => {
-            console.log("Test hook for padding directory clicked");
-            const thumbnailsDir = new MockDirectoryHandle('Thumbnails', new Map([
-                ['video1.jpg', new MockFileHandle('video1.jpg')],
-                ['video2.jpg', new MockFileHandle('video2.jpg')],
-                ['video3.jpg', new MockFileHandle('video3.jpg')]
-            ]));
-
-            const rootDir = new MockDirectoryHandle('verification-padding', new Map([
-                ['video1.mp4', new MockFileHandle('video1.mp4')],
-                ['video2.mp4', new MockFileHandle('video2.mp4')],
-                ['video3.mp4', new MockFileHandle('video3.mp4')],
-                ['Thumbnails', thumbnailsDir]
-            ]));
-
-            try {
-                await processDirectory(rootDir);
-                 console.log("processDirectory for padding dir finished");
-            } catch(e) {
-                console.error("Error in test hook processDirectory:", e);
-            }
-        });
+                e.target.value = '';
+            });
+        };
 
     </script>
 </body>
