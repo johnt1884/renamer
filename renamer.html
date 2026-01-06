@@ -348,7 +348,7 @@
             outline: 3px dashed #DAA520; /* Darker yellow */
         }
         .landscape-row.selected-shortcut {
-            outline: 3px dashed orange;
+            outline: 3px dashed magenta;
         }
         .landscape-row.selected-play {
             outline: 3px solid cyan;
@@ -2302,12 +2302,14 @@
             if (inEditMode) {
                 if (playSelections.size === 0) return;
                 playlist = Array.from(playSelections).map(videoName => {
-                    const videoFile = allVideoFiles.find(f => f.name.startsWith(videoName));
-                    if (videoFile) {
-                        return { dataset: { fileName: videoFile.name.replace(/\.[^/.]+$/, ".jpg") } };
-                    }
-                    return null;
-                }).filter(Boolean);
+                    // Find the actual thumbnail wrapper from the master list.
+                    // This ensures the playlist contains the full element the player expects.
+                    return allThumbnails.find(thumbWrapper => {
+                        const nameDiv = thumbWrapper.querySelector('.thumbnail-name');
+                        const originalFilename = nameDiv ? nameDiv.dataset.originalFilename : '';
+                        return originalFilename.startsWith(videoName);
+                    });
+                }).filter(Boolean); // Filter out any nulls if a thumbnail wasn't found
             } else if (selectedThumbnails.size > 0) {
                 playlist = Array.from(selectedThumbnails);
             } else if (buttonsForRemoval.size === 1) {
